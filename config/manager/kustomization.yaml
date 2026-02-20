@@ -1,0 +1,3 @@
+resources:
+- manager.yaml
+- otlp_service.yaml

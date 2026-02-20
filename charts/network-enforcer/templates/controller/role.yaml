@@ -1,0 +1,83 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "network-enforcer.fullname" . }}-controller
+  labels:
+  {{- include "network-enforcer.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+{{- if eq .Values.controller.policyBackend "calico" }}
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- else if eq .Values.controller.policyBackend "kubernetes" }}
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- else if eq .Values.controller.policyBackend "cilium" }}
+- apiGroups:
+  - cilium.io
+  resources:
+  - ciliumnetworkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- end }}
+- apiGroups:
+  - security.security.rancher.io
+  resources:
+  - networkpolicyproposals
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - security.security.rancher.io
+  resources:
+  - networkpolicyproposals/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - security.security.rancher.io
+  resources:
+  - networkpolicyproposals/status
+  verbs:
+  - get
+  - patch
+  - update

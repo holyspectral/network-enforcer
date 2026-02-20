@@ -1,0 +1,296 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: networkpolicyproposals.security.security.rancher.io
+spec:
+  group: security.security.rancher.io
+  names:
+    kind: NetworkPolicyProposal
+    listKind: NetworkPolicyProposalList
+    plural: networkpolicyproposals
+    shortNames:
+    - npp
+    singular: networkpolicyproposal
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.workloadRef.name
+      name: Workload
+      type: string
+    - jsonPath: .spec.workloadRef.kind
+      name: Kind
+      type: string
+    - jsonPath: .metadata.labels.security\.rancher\.io/enforce
+      name: Enforced
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NetworkPolicyProposal is the Schema for the networkpolicyproposals
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NetworkPolicyProposalSpec defines the desired state of NetworkPolicyProposal.
+            properties:
+              egress:
+                description: egress is the list of proposed egress rules.
+                items:
+                  description: ProposedRule is a single ingress or egress rule grouping
+                    peers with ports.
+                  properties:
+                    peers:
+                      description: peers is the list of network peers for this rule.
+                      items:
+                        description: PolicyPeer identifies a network peer — either
+                          a workload or an external CIDR.
+                        properties:
+                          cidr:
+                            description: cidr identifies an external peer by IP range
+                              (e.g. "10.0.0.1/32").
+                            type: string
+                          namespace:
+                            description: namespace is the namespace of the peer workload.
+                            type: string
+                          workload:
+                            description: workload identifies a Kubernetes workload
+                              peer.
+                            properties:
+                              kind:
+                                description: kind is the workload kind (Deployment,
+                                  StatefulSet, or DaemonSet).
+                                enum:
+                                - Deployment
+                                - StatefulSet
+                                - DaemonSet
+                                type: string
+                              name:
+                                description: name is the workload name.
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
+                        type: object
+                      type: array
+                    ports:
+                      description: ports is the list of allowed port/protocol combinations.
+                      items:
+                        description: PortRule defines a protocol/port combination.
+                        properties:
+                          port:
+                            description: port is the destination port number.
+                            format: int32
+                            type: integer
+                          protocol:
+                            description: protocol is the transport protocol (TCP or
+                              UDP).
+                            enum:
+                            - TCP
+                            - UDP
+                            type: string
+                        required:
+                        - port
+                        - protocol
+                        type: object
+                      type: array
+                  required:
+                  - peers
+                  - ports
+                  type: object
+                type: array
+              ingress:
+                description: ingress is the list of proposed ingress rules.
+                items:
+                  description: ProposedRule is a single ingress or egress rule grouping
+                    peers with ports.
+                  properties:
+                    peers:
+                      description: peers is the list of network peers for this rule.
+                      items:
+                        description: PolicyPeer identifies a network peer — either
+                          a workload or an external CIDR.
+                        properties:
+                          cidr:
+                            description: cidr identifies an external peer by IP range
+                              (e.g. "10.0.0.1/32").
+                            type: string
+                          namespace:
+                            description: namespace is the namespace of the peer workload.
+                            type: string
+                          workload:
+                            description: workload identifies a Kubernetes workload
+                              peer.
+                            properties:
+                              kind:
+                                description: kind is the workload kind (Deployment,
+                                  StatefulSet, or DaemonSet).
+                                enum:
+                                - Deployment
+                                - StatefulSet
+                                - DaemonSet
+                                type: string
+                              name:
+                                description: name is the workload name.
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
+                        type: object
+                      type: array
+                    ports:
+                      description: ports is the list of allowed port/protocol combinations.
+                      items:
+                        description: PortRule defines a protocol/port combination.
+                        properties:
+                          port:
+                            description: port is the destination port number.
+                            format: int32
+                            type: integer
+                          protocol:
+                            description: protocol is the transport protocol (TCP or
+                              UDP).
+                            enum:
+                            - TCP
+                            - UDP
+                            type: string
+                        required:
+                        - port
+                        - protocol
+                        type: object
+                      type: array
+                  required:
+                  - peers
+                  - ports
+                  type: object
+                type: array
+              workloadRef:
+                description: workloadRef identifies the workload this proposal covers.
+                properties:
+                  kind:
+                    description: kind is the workload kind (Deployment, StatefulSet,
+                      or DaemonSet).
+                    enum:
+                    - Deployment
+                    - StatefulSet
+                    - DaemonSet
+                    type: string
+                  name:
+                    description: name is the workload name.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+            required:
+            - workloadRef
+            type: object
+          status:
+            description: NetworkPolicyProposalStatus defines the observed state of
+              NetworkPolicyProposal.
+            properties:
+              conditions:
+                description: conditions represent the current state of the proposal.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              firstObserved:
+                description: firstObserved is when flows for this workload were first
+                  seen.
+                format: date-time
+                type: string
+              generatedPolicyName:
+                description: generatedPolicyName is the name of the Calico NetworkPolicy
+                  created from this proposal.
+                type: string
+              lastObserved:
+                description: lastObserved is when flows for this workload were last
+                  seen.
+                format: date-time
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

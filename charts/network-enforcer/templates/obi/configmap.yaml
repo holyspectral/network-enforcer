@@ -1,0 +1,19 @@
+{{- if .Values.obi.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: network-enforcer-obi-config
+  labels:
+  {{- include "network-enforcer.labels" . | nindent 4 }}
+data:
+  ebpf-instrument-config.yml: |
+    otel_metrics_export:
+      endpoint: http://{{ include "network-enforcer.fullname" . }}-otlp:4317
+    otel_traces_export:
+      endpoint: ""
+    attributes:
+      kubernetes:
+        enable: true
+    network:
+      enable: true
+{{- end }}

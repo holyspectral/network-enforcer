@@ -1,0 +1,46 @@
+controller:
+  policyBackend: kubernetes
+  args:
+  - --metrics-bind-address=:8443
+  - --leader-elect
+  - --health-probe-bind-address=:8081
+  env: []
+  containerSecurityContext:
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+  image:
+    repository: ghcr.io/rancher-sandbox/network-enforcer/controller
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  replicas: 1
+  serviceAccount:
+    annotations: {}
+  tolerations: []
+  podLabels: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  affinity: {}
+
+kubernetesClusterDomain: cluster.local
+imagePullSecrets: []
+
+obi:
+  enabled: true
+  preset: network
+  config:
+    create: false
+    name: network-enforcer-obi-config

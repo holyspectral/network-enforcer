@@ -1,0 +1,30 @@
+apiVersion: security.security.rancher.io/v1alpha1
+kind: NetworkPolicyProposal
+metadata:
+  labels:
+    app.kubernetes.io/name: network-enforcer
+    app.kubernetes.io/managed-by: kustomize
+  name: deployment-nginx
+  namespace: default
+spec:
+  workloadRef:
+    kind: Deployment
+    name: nginx
+  ingress:
+    - peers:
+        - workload:
+            kind: Deployment
+            name: frontend
+          namespace: default
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    - peers:
+        - workload:
+            kind: Deployment
+            name: postgres
+          namespace: default
+      ports:
+        - protocol: TCP
+          port: 5432

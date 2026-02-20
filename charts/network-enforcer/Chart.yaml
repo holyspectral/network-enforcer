@@ -1,0 +1,26 @@
+apiVersion: v2
+name: network-enforcer
+description: SUSE Security Network Enforcer helm chart
+type: application
+version: 0.1.0
+appVersion: v0.1.0
+
+dependencies:
+  - name: opentelemetry-ebpf-instrumentation
+    version: 0.6.0
+    repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+    alias: obi
+    condition: obi.enabled
+
+annotations:
+  catalog.cattle.io/certified: rancher
+  catalog.cattle.io/namespace: network-enforcer
+  catalog.cattle.io/release-name: rancher-network-enforcer
+  catalog.cattle.io/ui-component: network-enforcer
+  catalog.cattle.io/display-name: NetworkEnforcer
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/provides-gvr: "security.security.rancher.io/v1alpha1"
+  catalog.cattle.io/requests-cpu: "500m"
+  catalog.cattle.io/requests-memory: "128Mi"
+  catalog.cattle.io/rancher-version: ">= 2.6.0-0 <= 2.12.100-0"
+  catalog.cattle.io/type: cluster-tool
