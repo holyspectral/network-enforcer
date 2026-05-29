@@ -67,7 +67,7 @@ func (w *TestCalicoWatcher) connectToGoldmane() error {
 	if w.connectFunc != nil {
 		return w.connectFunc()
 	}
-	return w.CalicoWatcher.ConnectToGoldmane()
+	return w.ConnectToGoldmane()
 }
 
 func TestCalicoWatcher_ConnectToGoldmane(t *testing.T) {
@@ -86,8 +86,8 @@ func TestCalicoWatcher_ConnectToGoldmane(t *testing.T) {
 	}
 
 	for filename, content := range certFiles {
-		filepath := filepath.Join(certDir, filename)
-		if writeErr := os.WriteFile(filepath, []byte(content), 0644); writeErr != nil {
+		certPath := filepath.Join(certDir, filename)
+		if writeErr := os.WriteFile(certPath, []byte(content), 0644); writeErr != nil {
 			t.Fatalf("Failed to create cert file %s: %v", filename, writeErr)
 		}
 	}

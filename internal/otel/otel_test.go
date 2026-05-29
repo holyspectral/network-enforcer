@@ -70,7 +70,8 @@ func TestOtelService_EmitPolicyDenyEvent(t *testing.T) {
 		DstName:      "test-service",
 	}
 
-	service.EmitPolicyDenyEvent(event)
+	err := service.EmitPolicyDenyEvent(event)
+	assert.Error(t, err)
 }
 
 func TestOtelService_Shutdown(t *testing.T) {

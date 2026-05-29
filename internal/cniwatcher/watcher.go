@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"slices"
 	"time"
 
 	"github.com/jdrews/go-tailer/fswatcher"
@@ -106,12 +107,7 @@ func extractLabels(labels map[string]string) []string {
 }
 
 func containsIP(ips []string, target string) bool {
-	for _, ip := range ips {
-		if ip == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ips, target)
 }
 
 // ResolvePodOrServiceByIP resolves a Pod or Service info from an IP address.

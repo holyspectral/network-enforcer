@@ -68,7 +68,7 @@ func (w *TestCiliumWatcher) connectToHubble() error {
 	if w.connectFunc != nil {
 		return w.connectFunc()
 	}
-	return w.CiliumWatcher.ConnectToHubble()
+	return w.ConnectToHubble()
 }
 
 func TestCiliumWatcher_ConnectToHubble(t *testing.T) {
