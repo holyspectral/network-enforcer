@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/tls"
 	"flag"
-	"fmt"
 	"os"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -35,9 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	securityv1alpha1 "secuity.rancher.io/network-enforcer/api/v1alpha1"
-	"secuity.rancher.io/network-enforcer/internal/backend"
-	backendcalico "secuity.rancher.io/network-enforcer/internal/backend/calico"
-	backendcilium "secuity.rancher.io/network-enforcer/internal/backend/cilium"
 	backendkubernetes "secuity.rancher.io/network-enforcer/internal/backend/kubernetes"
 	"secuity.rancher.io/network-enforcer/internal/controller"
 	"secuity.rancher.io/network-enforcer/internal/flowcollector"
@@ -56,19 +52,6 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func newBackend(name string) (backend.PolicyBackend, error) {
-	switch name {
-	case "calico":
-		return &backendcalico.Backend{}, nil
-	case "kubernetes":
-		return &backendkubernetes.Backend{}, nil
-	case "cilium":
-		return &backendcilium.Backend{}, nil
-	default:
-		return nil, fmt.Errorf("unknown policy backend: %q (valid: calico, kubernetes, cilium)", name)
-	}
-}
-
 func main() {
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
@@ -78,7 +61,6 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var otlpPort int
-	var policyBackendName string
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -98,8 +80,6 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.IntVar(&otlpPort, "otlp-port", 4317, "The port the OTLP gRPC receiver listens on.")
-	flag.StringVar(&policyBackendName, "policy-backend", "kubernetes",
-		"Network policy backend to use: kubernetes, calico, or cilium.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -107,14 +87,6 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	policyBackend, err := newBackend(policyBackendName)
-	if err != nil {
-		setupLog.Error(err, "invalid policy backend")
-		os.Exit(1)
-	}
-	utilruntime.Must(policyBackend.AddToScheme(scheme))
-	setupLog.Info("using policy backend", "backend", policyBackend.Name())
 
 	// Mitigate HTTP/2 Stream Cancellation / Rapid Reset CVEs.
 	disableHTTP2 := func(c *tls.Config) {
@@ -192,7 +164,7 @@ func main() {
 	if err := (&controller.EnforcementReconciler{
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),
-		Backend: policyBackend,
+		Backend: &backendkubernetes.Backend{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "setup controller", "controller", "Enforcement")
 		os.Exit(1)

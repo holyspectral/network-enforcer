@@ -32,7 +32,6 @@ spec:
       containers:
       - args:
         {{- toYaml .Values.controller.args | nindent 8 }}
-        - --policy-backend={{ .Values.controller.policyBackend }}
         command:
         - /controller
         env:

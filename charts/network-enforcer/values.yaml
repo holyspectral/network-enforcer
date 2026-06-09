@@ -1,5 +1,4 @@
 controller:
-  policyBackend: kubernetes
   args:
   - --metrics-bind-address=:8443
   - --leader-elect
