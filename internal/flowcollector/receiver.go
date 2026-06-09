@@ -89,11 +89,15 @@ func (r *Receiver) processMetric(m *metricspb.Metric, now time.Time) {
 	}
 
 	for _, dp := range dataPoints {
-		r.store.Record(r.parseDataPoint(dp, now))
+		rec, ok := r.parseDataPoint(dp, now)
+		if !ok {
+			continue
+		}
+		r.store.Record(rec)
 	}
 }
 
-func (r *Receiver) parseDataPoint(dp *metricspb.NumberDataPoint, now time.Time) topology.FlowRecord {
+func (r *Receiver) parseDataPoint(dp *metricspb.NumberDataPoint, now time.Time) (topology.FlowRecord, bool) {
 	attrs := attrMap(dp.GetAttributes())
 	r.log.Info("parsed datapoint", "attrs", attrs)
 
@@ -111,7 +115,11 @@ func (r *Receiver) parseDataPoint(dp *metricspb.NumberDataPoint, now time.Time) 
 		protocol = "TCP"
 	}
 
-	dstPort, _ := strconv.ParseInt(dstPortStr, 10, 32)
+	dstPort, err := strconv.ParseInt(dstPortStr, 10, 32)
+	if err != nil || dstPort <= 0 || dstPort > 65535 {
+		r.log.V(1).Info("Dropped datapoint with missing or invalid dst.port", "value", dstPortStr)
+		return topology.FlowRecord{}, false
+	}
 
 	var byteCount int64
 	switch v := dp.GetValue().(type) {
@@ -139,14 +147,27 @@ func (r *Receiver) parseDataPoint(dp *metricspb.NumberDataPoint, now time.Time) 
 		FirstSeen:  now,
 		LastSeen:   now,
 		ByteCount:  byteCount,
-	}
+	}, true
 }
 
 func attrMap(attrs []*commonpb.KeyValue) map[string]string {
 	m := make(map[string]string, len(attrs))
 	for _, kv := range attrs {
-		if kv.GetValue().GetStringValue() != "" {
-			m[kv.GetKey()] = kv.GetValue().GetStringValue()
+		v := kv.GetValue()
+		if v == nil {
+			continue
+		}
+		switch val := v.Value.(type) {
+		case *commonpb.AnyValue_StringValue:
+			if val.StringValue != "" {
+				m[kv.GetKey()] = val.StringValue
+			}
+		case *commonpb.AnyValue_IntValue:
+			m[kv.GetKey()] = strconv.FormatInt(val.IntValue, 10)
+		case *commonpb.AnyValue_DoubleValue:
+			m[kv.GetKey()] = strconv.FormatFloat(val.DoubleValue, 'f', -1, 64)
+		case *commonpb.AnyValue_BoolValue:
+			m[kv.GetKey()] = strconv.FormatBool(val.BoolValue)
 		}
 	}
 	return m

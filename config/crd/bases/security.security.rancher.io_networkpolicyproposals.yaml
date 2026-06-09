@@ -32,8 +32,6 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: NetworkPolicyProposal is the Schema for the networkpolicyproposals
-          API.
         properties:
           apiVersion:
             description: |-
@@ -53,19 +51,14 @@ spec:
           metadata:
             type: object
           spec:
-            description: NetworkPolicyProposalSpec defines the desired state of NetworkPolicyProposal.
             properties:
               egress:
                 description: egress is the list of proposed egress rules.
                 items:
-                  description: ProposedRule is a single ingress or egress rule grouping
-                    peers with ports.
                   properties:
                     peers:
                       description: peers is the list of network peers for this rule.
                       items:
-                        description: PolicyPeer identifies a network peer — either
-                          a workload or an external CIDR.
                         properties:
                           cidr:
                             description: cidr identifies an external peer by IP range
@@ -98,7 +91,6 @@ spec:
                     ports:
                       description: ports is the list of allowed port/protocol combinations.
                       items:
-                        description: PortRule defines a protocol/port combination.
                         properties:
                           port:
                             description: port is the destination port number.
@@ -124,14 +116,10 @@ spec:
               ingress:
                 description: ingress is the list of proposed ingress rules.
                 items:
-                  description: ProposedRule is a single ingress or egress rule grouping
-                    peers with ports.
                   properties:
                     peers:
                       description: peers is the list of network peers for this rule.
                       items:
-                        description: PolicyPeer identifies a network peer — either
-                          a workload or an external CIDR.
                         properties:
                           cidr:
                             description: cidr identifies an external peer by IP range
@@ -164,7 +152,6 @@ spec:
                     ports:
                       description: ports is the list of allowed port/protocol combinations.
                       items:
-                        description: PortRule defines a protocol/port combination.
                         properties:
                           port:
                             description: port is the destination port number.
@@ -209,8 +196,6 @@ spec:
             - workloadRef
             type: object
           status:
-            description: NetworkPolicyProposalStatus defines the observed state of
-              NetworkPolicyProposal.
             properties:
               conditions:
                 description: conditions represent the current state of the proposal.
@@ -278,7 +263,7 @@ spec:
                 format: date-time
                 type: string
               generatedPolicyName:
-                description: generatedPolicyName is the name of the Calico NetworkPolicy
+                description: generatedPolicyName is the name of the network policy
                   created from this proposal.
                 type: string
               lastObserved:
