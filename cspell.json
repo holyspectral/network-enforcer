@@ -1,0 +1,25 @@
+{
+    "version": "0.2",
+    "ignorePaths": [
+        "/.github/",
+        "/cspell.json",
+        "/go.mod",
+        "/go.sum",
+        ".golangci.yml",
+        ".gitignore",
+        ".helmignore",
+    ],
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [
+        "crds",
+        "daemonset",
+        "statefulset",
+        "replicaset",
+    ],
+    "ignoreWords": [
+        "corev1",
+        "metav1",
+    ],
+    "import": []
+}
