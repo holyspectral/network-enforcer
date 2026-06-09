@@ -170,11 +170,120 @@ func TestReceiver_Export_GaugeMetric(t *testing.T) {
 	}
 }
 
+func TestReceiver_Export_IntPortAttribute(t *testing.T) {
+	store := topology.NewStore()
+	r := NewReceiver(store, 0, logr.Discard())
+
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{
+			{
+				ScopeMetrics: []*metricspb.ScopeMetrics{
+					{
+						Metrics: []*metricspb.Metric{
+							{
+								Name: "obi.network.flow.bytes",
+								Data: &metricspb.Metric_Sum{
+									Sum: &metricspb.Sum{
+										DataPoints: []*metricspb.NumberDataPoint{
+											{
+												Value: &metricspb.NumberDataPoint_AsInt{AsInt: 512},
+												Attributes: []*commonpb.KeyValue{
+													strAttr("k8s.src.namespace", "demo"),
+													strAttr("k8s.src.owner.type", "Deployment"),
+													strAttr("k8s.src.owner.name", "frontend"),
+													strAttr("k8s.dst.namespace", "demo"),
+													strAttr("k8s.dst.owner.type", "Deployment"),
+													strAttr("k8s.dst.owner.name", "backend"),
+													intAttr("dst.port", 8080),
+													strAttr("transport", "tcp"),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if _, err := r.Export(context.Background(), req); err != nil {
+		t.Fatalf("Export failed: %v", err)
+	}
+
+	wk := topology.WorkloadKey{Namespace: "demo", OwnerKind: "Deployment", OwnerName: "frontend"}
+	flows := store.FlowsForWorkload(wk)
+	if len(flows) != 1 {
+		t.Fatalf("expected 1 flow, got %d", len(flows))
+	}
+	if flows[0].DstPort != 8080 {
+		t.Fatalf("expected dst port 8080, got %d", flows[0].DstPort)
+	}
+}
+
+func TestReceiver_Export_DropsMissingPort(t *testing.T) {
+	store := topology.NewStore()
+	r := NewReceiver(store, 0, logr.Discard())
+
+	req := &colmetricspb.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metricspb.ResourceMetrics{
+			{
+				ScopeMetrics: []*metricspb.ScopeMetrics{
+					{
+						Metrics: []*metricspb.Metric{
+							{
+								Name: "obi.network.flow.bytes",
+								Data: &metricspb.Metric_Sum{
+									Sum: &metricspb.Sum{
+										DataPoints: []*metricspb.NumberDataPoint{
+											{
+												Value: &metricspb.NumberDataPoint_AsInt{AsInt: 1},
+												Attributes: []*commonpb.KeyValue{
+													strAttr("k8s.src.namespace", "demo"),
+													strAttr("k8s.src.owner.type", "Deployment"),
+													strAttr("k8s.src.owner.name", "frontend"),
+													strAttr("k8s.dst.namespace", "demo"),
+													strAttr("k8s.dst.owner.type", "Deployment"),
+													strAttr("k8s.dst.owner.name", "backend"),
+													strAttr("transport", "tcp"),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if _, err := r.Export(context.Background(), req); err != nil {
+		t.Fatalf("Export failed: %v", err)
+	}
+
+	if len(store.Workloads()) != 0 {
+		t.Fatal("expected datapoint with missing dst.port to be dropped")
+	}
+}
+
 func strAttr(key, value string) *commonpb.KeyValue {
 	return &commonpb.KeyValue{
 		Key: key,
 		Value: &commonpb.AnyValue{
 			Value: &commonpb.AnyValue_StringValue{StringValue: value},
+		},
+	}
+}
+
+func intAttr(key string, value int64) *commonpb.KeyValue {
+	return &commonpb.KeyValue{
+		Key: key,
+		Value: &commonpb.AnyValue{
+			Value: &commonpb.AnyValue_IntValue{IntValue: value},
 		},
 	}
 }

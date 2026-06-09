@@ -14,6 +14,20 @@ data:
     attributes:
       kubernetes:
         enable: true
+      select:
+        obi_network_flow_bytes:
+          include:
+            - k8s.src.namespace
+            - k8s.src.owner.type
+            - k8s.src.owner.name
+            - k8s.dst.namespace
+            - k8s.dst.owner.type
+            - k8s.dst.owner.name
+            - src.address
+            - dst.address
+            - dst.port
+            - transport
+            - direction
     network:
       enable: true
 {{- end }}
