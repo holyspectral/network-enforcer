@@ -122,11 +122,11 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+	go build -o bin/manager cmd/netenforcer/main.go
 
 .PHONY: controller
 controller: fmt ## Build controller binary.
-	CGO_ENABLED=0 GOOS=linux go build -o bin/controller cmd/main.go
+	CGO_ENABLED=0 GOOS=linux go build -o bin/controller cmd/netenforcer/main.go
 
 CNIWATCHER_VERSION ?= $(shell git describe --tags --dirty --always 2>/dev/null || echo "v0.0.0")
 CNIWATCHER_LDFLAGS := -X main.CniWatcherVersion=$(CNIWATCHER_VERSION)
@@ -137,7 +137,7 @@ cniwatcher: fmt vet ## Build cniwatcher binary.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/main.go
+	go run ./cmd/netenforcer/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.

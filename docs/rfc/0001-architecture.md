@@ -332,7 +332,7 @@ type PolicyBackend interface {
 
 - `Name() string`: identifier used by `--policy-backend` and in log lines.
   Must match the flag value (`"kubernetes"`, `"calico"`, `"cilium"`, ...)
-  and be registered in `cmd/main.go`'s `newBackend` switch.
+  and be registered in `cmd/netenforcer/main.go`'s `newBackend` switch.
 - `AddToScheme(s *runtime.Scheme) error`: register the backend's policy
   types with the manager's scheme so the client can `Get`, `Create`, and
   `Update` them. Return `nil` for backends whose types are already in
@@ -379,7 +379,7 @@ type PolicyBackend interface {
 3. In `Build`, translate `proposal.Spec.Ingress` and `proposal.Spec.Egress`
    into the CNI's rule shape. The three existing backends cover the L3/L4
    mappings the CRD expresses today.
-4. Wire it into `cmd/main.go`'s `newBackend` switch and add the name to the
+4. Wire it into `cmd/netenforcer/main.go`'s `newBackend` switch and add the name to the
    `--policy-backend` flag's help text.
 5. No reconciler, CRD, scanner, store, or fingerprint changes are required.
 
