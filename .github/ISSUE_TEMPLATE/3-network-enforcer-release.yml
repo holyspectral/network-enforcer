@@ -1,0 +1,35 @@
+name: Network Enforcer Release
+title: "Network Enforcer <VERSION> release"
+description: Issue with all the items needed to release a new version of Network Enforcer
+projects: ["rancher-sandbox/8"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue tracks the release of a new version of Network Enforcer. 
+
+  - type: textarea
+    attributes:
+      label: Checklist
+      description: Base checklist for the release process. Please, add or remove items as needed.
+      value: |
+        This issue tracks the release of a new version of Network Enforcer. Please follow the checklist below to ensure a smooth release process.
+        - [ ] Make sure CI is green
+        - [ ] Create a *draft* release with the version tag and generate release notes.
+        - [ ] Tag network-enforcer (manually, through `git tag` and `git push --tags`)
+        - [ ] Verify the "Create a new release for NetworkEnforcer (release.yml)" workflow completes without problem
+          - [ ] Verify the draft release is now published
+          - [ ] Verify that the container images are published on ghcr.io
+        - [ ] Check if updatecli opens a PR updating the Helm charts with the correct changes.
+          - [ ] Check if agent and controller's image versions are correctly bumped.
+          - [ ] Check if app version and chart version are correctly bumped.
+          - [ ] Check if CI for the Helm chart PR is green. If so, merge it.
+        - [ ] Verify that helm release is correctly created and new version in helm repo is accessible.
+
+        ## FAQ
+        ### What if we want to bump the helm chart to more than just a patch release?
+        Make a code suggestion in the updatecli PR. Another team member will accept it and you can just merge the PR.
+
+        ### My updatecli CI jobs won't start!
+        Try closing and reopening the associated PR.
