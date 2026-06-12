@@ -1,4 +1,4 @@
-package flowcollector
+package receiver
 
 import (
 	"context"

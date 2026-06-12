@@ -39,7 +39,7 @@ import (
 	securityv1alpha1 "secuity.rancher.io/network-enforcer/api/v1alpha1"
 	backendkubernetes "secuity.rancher.io/network-enforcer/internal/backend/kubernetes"
 	"secuity.rancher.io/network-enforcer/internal/controller"
-	"secuity.rancher.io/network-enforcer/internal/flowcollector"
+	"secuity.rancher.io/network-enforcer/internal/receiver"
 	"secuity.rancher.io/network-enforcer/internal/topology"
 	// +kubebuilder:scaffold:imports
 )
@@ -108,7 +108,7 @@ func run(logger *slog.Logger, conf *config) error {
 
 	store := topology.NewStore()
 
-	receiver := flowcollector.NewReceiver(store, conf.otlpPort, logger)
+	receiver := receiver.NewReceiver(store, conf.otlpPort, logger)
 	err = mgr.Add(receiver)
 	if err != nil {
 		return fmt.Errorf("unable to add OTLP receiver to manager: %w", err)
