@@ -16,6 +16,10 @@
         "daemonset",
         "statefulset",
         "replicaset",
+        "kindnet",
+        "cniwatcher",
+        "securityv1alpha1",
+        "networkingv1"
     ],
     "ignoreWords": [
         "corev1",
