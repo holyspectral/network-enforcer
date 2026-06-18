@@ -3,7 +3,7 @@
 ## Kind + tilt
 
 ```bash
-kind create cluster --config=./hack/kind-no-cni.yaml
+kind create cluster --config=./test/e2e/clusters/no-cni.yaml
 # the CNI used by tilt is the one you set in the `tilt-settings.yaml`
 tilt up
 ```
