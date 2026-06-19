@@ -75,12 +75,10 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet setup-envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test $$(go list ./... | grep -v /e2e) -count=1 -coverprofile cover.out
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
 # The default setup assumes Kind is pre-installed and builds/loads the Manager Docker image locally.
-# CertManager is installed by default; skip with:
-# - CERT_MANAGER_INSTALL_SKIP=true
 KIND_CLUSTER ?= network-enforcer-test-e2e
 
 .PHONY: setup-test-e2e
@@ -300,3 +298,8 @@ generate-calico-goldmane-proto: download-calico-goldmane-proto ## Generate Go co
 .PHONY: build-cniwatcher-image
 build-cniwatcher-image:
 	$(CONTAINER_TOOL) build -t cniwatcher:latest --build-arg CNIWATCHER_VERSION=$(CNIWATCHER_VERSION) -f package/Dockerfile.cniwatcher .
+
+.PHONY: test-e2e
+test-e2e: build-controller-image
+	@echo "🧪 Running e2e tests..."
+	go test -v ./test/e2e/... -count=1

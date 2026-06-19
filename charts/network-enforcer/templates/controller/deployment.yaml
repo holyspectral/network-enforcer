@@ -32,6 +32,7 @@ spec:
       containers:
       - args:
         {{- toYaml .Values.controller.args | nindent 8 }}
+        - --drain-flows-interval={{ .Values.controller.drainFlowsInterval }}
         command:
         - /controller
         env:

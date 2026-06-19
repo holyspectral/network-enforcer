@@ -33,6 +33,7 @@ controller:
   podAnnotations: {}
   nodeSelector: {}
   affinity: {}
+  drainFlowsInterval: 30s
 
 kubernetesClusterDomain: cluster.local
 imagePullSecrets: []
@@ -41,10 +42,24 @@ obi:
   enabled: true
   preset: network
   config:
-    create: false
-    name: network-enforcer-obi-config
+    data:
+      otel_metrics_export:
+        endpoint: http://network-enforcer-otlp:4317
+        interval: 30s
+      otel_traces_export:
+        endpoint: ""
+      attributes:
+        kubernetes:
+          enable: true
+        select:
+          obi_network_flow_bytes:
+            include: ["*"]
+      metrics:
+        features:
+          - network
 
 cniwatcher:
+  enabled: true
   # Valid values: aws-vpc, calico, cilium, flannel
   cniType: calico
   image:
