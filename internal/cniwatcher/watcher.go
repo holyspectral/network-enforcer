@@ -220,18 +220,18 @@ func (w *Watcher) RetryConnectAndWatchFlows(
 func (w *Watcher) connectAndWatch(connectFunc func() error, watchFunc func() error, backoff wait.Backoff) error {
 	return wait.ExponentialBackoffWithContext(w.Ctx, backoff, func(_ context.Context) (bool, error) {
 		if err := connectFunc(); err != nil {
-			w.Log.Error("Failed to connect, will retry", "err", err)
+			w.Log.ErrorContext(w.Ctx, "Failed to connect, will retry", "err", err)
 			return false, nil
 		}
 
-		w.Log.Debug("Successfully connected, starting to watch flows")
+		w.Log.DebugContext(w.Ctx, "Successfully connected, starting to watch flows")
 
 		err := watchFunc()
 		if err != nil {
 			if w.Ctx.Err() == context.Canceled {
 				return true, nil
 			}
-			w.Log.Error("Error watching flows, will retry connection", "err", err)
+			w.Log.ErrorContext(w.Ctx, "Error watching flows, will retry connection", "err", err)
 			return false, nil
 		}
 

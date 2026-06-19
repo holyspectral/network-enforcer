@@ -16,6 +16,7 @@ const (
 
 type AWSVPCWatcher struct {
 	Watcher
+
 	tailer fswatcher.FileTailer
 }
 

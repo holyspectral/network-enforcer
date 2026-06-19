@@ -26,33 +26,48 @@ type flow struct {
 	bytes                   int64
 }
 
-var demoFlows = []flow{
-	{
-		srcNs: "demo", srcKind: "Deployment", srcName: "frontend",
-		dstNs: "demo", dstKind: "Deployment", dstName: "backend",
-		srcAddr: "10.42.0.10", dstAddr: "10.42.0.20",
-		dstPort: "8080", protocol: "tcp", bytes: 2048,
-	},
-	{
-		srcNs: "demo", srcKind: "Deployment", srcName: "backend",
-		dstNs: "demo", dstKind: "Deployment", dstName: "postgres",
-		srcAddr: "10.42.0.20", dstAddr: "10.42.0.30",
-		dstPort: "5432", protocol: "tcp", bytes: 4096,
-	},
-	{
-		// External traffic hitting the frontend
-		srcNs: "", srcKind: "", srcName: "",
-		dstNs: "demo", dstKind: "Deployment", dstName: "frontend",
-		srcAddr: "203.0.113.50", dstAddr: "10.42.0.10",
-		dstPort: "8080", protocol: "tcp", bytes: 512,
-	},
-	{
-		// Backend calling an external API
-		srcNs: "demo", srcKind: "Deployment", srcName: "backend",
-		dstNs: "", dstKind: "", dstName: "",
-		srcAddr: "10.42.0.20", dstAddr: "198.51.100.1",
-		dstPort: "443", protocol: "tcp", bytes: 1024,
-	},
+func demoFlows() []flow {
+	const (
+		demoNamespace  = "demo"
+		deploymentKind = "Deployment"
+		backendName    = "backend"
+		tcpProtocol    = "tcp"
+		backendAddr    = "10.42.0.20"
+
+		frontendToBackendBytes  = int64(2048)
+		backendToPostgresBytes  = int64(4096)
+		externalToFrontendBytes = int64(512)
+		backendToExternalBytes  = int64(1024)
+	)
+
+	return []flow{
+		{
+			srcNs: demoNamespace, srcKind: deploymentKind, srcName: "frontend",
+			dstNs: demoNamespace, dstKind: deploymentKind, dstName: backendName,
+			srcAddr: "10.42.0.10", dstAddr: backendAddr,
+			dstPort: "8080", protocol: tcpProtocol, bytes: frontendToBackendBytes,
+		},
+		{
+			srcNs: demoNamespace, srcKind: deploymentKind, srcName: backendName,
+			dstNs: demoNamespace, dstKind: deploymentKind, dstName: "postgres",
+			srcAddr: backendAddr, dstAddr: "10.42.0.30",
+			dstPort: "5432", protocol: tcpProtocol, bytes: backendToPostgresBytes,
+		},
+		{
+			// External traffic hitting the frontend
+			srcNs: "", srcKind: "", srcName: "",
+			dstNs: demoNamespace, dstKind: deploymentKind, dstName: "frontend",
+			srcAddr: "203.0.113.50", dstAddr: "10.42.0.10",
+			dstPort: "8080", protocol: tcpProtocol, bytes: externalToFrontendBytes,
+		},
+		{
+			// Backend calling an external API
+			srcNs: demoNamespace, srcKind: deploymentKind, srcName: backendName,
+			dstNs: "", dstKind: "", dstName: "",
+			srcAddr: backendAddr, dstAddr: "198.51.100.1",
+			dstPort: "443", protocol: tcpProtocol, bytes: backendToExternalBytes,
+		},
+	}
 }
 
 func main() {
@@ -70,20 +85,21 @@ func main() {
 	log.Printf("sending flow metrics to %s every %s", *target, *interval)
 
 	for {
-		req := buildRequest()
-		_, err := client.Export(context.Background(), req)
-		if err != nil {
-			log.Printf("export failed: %v (will retry)", err)
+		flows := demoFlows()
+		req := buildRequest(flows)
+		_, exportErr := client.Export(context.Background(), req)
+		if exportErr != nil {
+			log.Printf("export failed: %v (will retry)", exportErr)
 		} else {
-			log.Printf("exported %d flows", len(demoFlows))
+			log.Printf("exported %d flows", len(flows))
 		}
 		time.Sleep(*interval)
 	}
 }
 
-func buildRequest() *colmetricspb.ExportMetricsServiceRequest {
-	dataPoints := make([]*metricspb.NumberDataPoint, 0, len(demoFlows))
-	for _, f := range demoFlows {
+func buildRequest(flows []flow) *colmetricspb.ExportMetricsServiceRequest {
+	dataPoints := make([]*metricspb.NumberDataPoint, 0, len(flows))
+	for _, f := range flows {
 		dp := &metricspb.NumberDataPoint{
 			Value: &metricspb.NumberDataPoint_AsInt{AsInt: f.bytes},
 			Attributes: []*commonpb.KeyValue{

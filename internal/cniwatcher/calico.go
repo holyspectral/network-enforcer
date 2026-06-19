@@ -24,6 +24,7 @@ const calicoAggregationInterval = 15 // seconds
 
 type CalicoWatcher struct {
 	Watcher
+
 	ConnEndpoint string
 	Client       pb.FlowsClient
 	conn         *grpc.ClientConn

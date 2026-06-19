@@ -61,6 +61,7 @@ func TestNewCiliumWatcher(t *testing.T) {
 
 type TestCiliumWatcher struct {
 	*cniwatcher.CiliumWatcher
+
 	connectFunc func() error
 }
 
@@ -137,6 +138,7 @@ func TestCiliumWatcher_ConnectToHubble(t *testing.T) {
 
 type MockObserverClient struct {
 	hubbleObserver.ObserverClient
+
 	getFlowsFunc func(ctx context.Context, req *hubbleObserver.GetFlowsRequest, opts ...grpc.CallOption) (hubbleObserver.Observer_GetFlowsClient, error)
 }
 
@@ -153,6 +155,7 @@ func (m *MockObserverClient) GetFlows(
 
 type MockGetFlowsClient struct {
 	hubbleObserver.Observer_GetFlowsClient
+
 	recvFunc func() (*hubbleObserver.GetFlowsResponse, error)
 }
 

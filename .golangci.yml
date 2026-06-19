@@ -454,12 +454,6 @@ linters:
     presets:
       - std-error-handling
       - common-false-positives
-    # Excluding configuration per-path, per-linter, per-text and per-source.
-    paths:
-      # todo!: disable linters on CNI watcher and tests for now
-      - '^internal/cniwatcher/.*\.go$'
-      - '^cmd/cniwatcher/.*\.go$'
-      - '^hack/.*\.go$'
     rules:
       - source: 'TODO'
         linters: [ godot ]

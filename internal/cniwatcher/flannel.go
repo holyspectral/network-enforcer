@@ -20,6 +20,7 @@ const policySplitParts = 2
 
 type FlannelWatcher struct {
 	Watcher
+
 	tailer fswatcher.FileTailer
 }
 

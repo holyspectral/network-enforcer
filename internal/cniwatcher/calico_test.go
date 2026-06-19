@@ -60,6 +60,7 @@ func TestNewCalicoWatcher(t *testing.T) {
 
 type TestCalicoWatcher struct {
 	*cniwatcher.CalicoWatcher
+
 	connectFunc func() error
 }
 
@@ -163,6 +164,7 @@ func TestCalicoWatcher_ConnectToGoldmane(t *testing.T) {
 
 type MockFlowsClient struct {
 	pb.FlowsClient
+
 	streamFunc func(ctx context.Context, req *pb.FlowStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[pb.FlowResult], error)
 }
 
@@ -179,6 +181,7 @@ func (m *MockFlowsClient) Stream(
 
 type MockStreamClient struct {
 	grpc.ServerStreamingClient[pb.FlowResult]
+
 	recvFunc func() (*pb.FlowResult, error)
 }
 
