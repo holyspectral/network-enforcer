@@ -17,6 +17,7 @@ import (
 
 type CiliumWatcher struct {
 	Watcher
+
 	ConnEndpoint string
 	Client       hubbleObserver.ObserverClient
 	conn         *grpc.ClientConn
