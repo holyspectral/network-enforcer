@@ -55,8 +55,3 @@ type NetworkPolicyProposalList struct {
 
 	Items []NetworkPolicyProposal `json:"items"`
 }
-
-//nolint:gochecknoinits // Kubebuilder API types register themselves during package initialization
-func init() {
-	SchemeBuilder.Register(&NetworkPolicyProposal{}, &NetworkPolicyProposalList{})
-}

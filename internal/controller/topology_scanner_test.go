@@ -11,11 +11,11 @@ import (
 )
 
 func protocolPtr(p corev1.Protocol) *corev1.Protocol {
-	return &p
+	return new(p)
 }
 
 func int32Ptr(v int32) *int32 {
-	return &v
+	return new(v)
 }
 
 func portPtr(v int32) *intstr.IntOrString {

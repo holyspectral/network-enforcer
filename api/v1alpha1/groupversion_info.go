@@ -20,15 +20,21 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 var (
 	//nolint:gochecknoglobals // Kubebuilder API registration requires package-level variables
 	GroupVersion = schema.GroupVersion{Group: "security.security.rancher.io", Version: "v1alpha1"}
 	//nolint:gochecknoglobals // Kubebuilder API registration requires package-level variables
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 	//nolint:gochecknoglobals // Kubebuilder API registration requires package-level variables
 	AddToScheme = SchemeBuilder.AddToScheme
 )
+
+// addKnownTypes registers the API types belonging to this group version with the scheme.
+func addKnownTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(GroupVersion, &NetworkPolicyProposal{}, &NetworkPolicyProposalList{})
+	return nil
+}
