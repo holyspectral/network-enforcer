@@ -20,6 +20,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -36,5 +37,6 @@ var (
 // addKnownTypes registers the API types belonging to this group version with the scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion, &NetworkPolicyProposal{}, &NetworkPolicyProposalList{})
+	metav1.AddToGroupVersion(scheme, GroupVersion)
 	return nil
 }
