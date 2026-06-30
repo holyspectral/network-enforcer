@@ -21,15 +21,13 @@ spec:
         app.kubernetes.io/part-of: {{ include "network-enforcer.name" . }}
     spec:
       serviceAccountName: {{ include "network-enforcer.fullname" . }}-cniwatcher
-      securityContext:
-        {{- include "network-enforcer.cniwatcher.podSecurityContext" . | nindent 8 }}
+      securityContext: {{- toYaml .Values.cniwatcher.podSecurityContext | nindent 8 }}
       containers:
         - name: cniwatcher
           image: "{{ .Values.cniwatcher.image.repository }}:{{ .Values.cniwatcher.image.tag }}"
           imagePullPolicy: {{ .Values.cniwatcher.image.pullPolicy }}
           {{- $cni := .Values.cniwatcher.cniType }}
-          securityContext:
-            {{- include "network-enforcer.cniwatcher.containerSecurityContext" . | nindent 12 }}
+          securityContext: {{- toYaml .Values.cniwatcher.containerSecurityContext | nindent 12 }}
           env:
             - name: NODE_NAME
               valueFrom:

@@ -63,43 +63,8 @@ if cniwatcher_enabled:
         namespace_create("calico-system")
 
         local_resource(
-            "install_calico_operator",
-            "kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.30.2/manifests/tigera-operator.yaml",
-        )
-
-        local_resource(
-            "wait_for_tigera_operator",
-            "kubectl wait --for=condition=ready pod -l name=tigera-operator -n tigera-operator --timeout=300s && echo 'Tigera operator is ready!'",
-            deps=["install_calico_operator"]
-        )
-
-        local_resource(
-            "setup_calico_custom_resources",
-            "kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.30.2/manifests/custom-resources.yaml",
-            deps=["wait_for_tigera_operator"],
-        )
-
-        local_resource(
-            "install_goldmane",
-            "kubectl apply -f - <<EOF\napiVersion: operator.tigera.io/v1\nkind: Goldmane\nmetadata:\n  name: default\n  namespace: calico-system\nEOF",
-            deps=["setup_calico_custom_resources"]
-        )
-
-        local_resource(
-            "extract_goldmane_certs",
-            "mkdir -p certs && \
-             kubectl get cm -n calico-system goldmane-ca-bundle -o jsonpath='{.data.tigera-ca-bundle\\.crt}' > certs/ca.crt && \
-             kubectl -n calico-system get secret goldmane-key-pair -o jsonpath='{.data.tls\\.crt}' | base64 -d > certs/tls.crt && \
-             kubectl -n calico-system get secret goldmane-key-pair -o jsonpath='{.data.tls\\.key}' | base64 -d > certs/tls.key",
-            deps=["install_goldmane"]
-        )
-
-        local_resource(
-            "create_goldmane_secret",
-            "kubectl create secret generic cniwatcher-goldmane-key-pair --from-file=tls.key=certs/tls.key \
-                --from-file=tls.crt=certs/tls.crt --from-file=ca.crt=certs/ca.crt -n calico-system \
-                --dry-run=client -o yaml | kubectl apply -f -",
-            deps=["extract_goldmane_certs"]
+            "setup_calico",
+            "bash ./hack/setup-calico.sh"
         )
     elif cni_type == "flannel":
         local_resource(
@@ -130,6 +95,8 @@ helm_set_values = [
     "cniwatcher.image.repository=" + cniwatcher_image,
     "cniwatcher.image.tag=" + cniwatcher_tag,
     "cniwatcher.cniType=" + cni_type,
+	"cniwatcher.containerSecurityContext.runAsUser=null",
+    "cniwatcher.podSecurityContext.runAsNonRoot=false",
     "cniwatcher.otelEndpoint=opentelemetry-collector.network-enforcer.svc.cluster.local:4317",
 ]
 
@@ -147,11 +114,12 @@ if cniwatcher_enabled:
         ])
     elif cni_type == "flannel":
         helm_set_values.extend([
-            "cniwatcher.flannel.namespace=kube-system"
+            "cniwatcher.flannel.namespace=kube-system",
+            "cniwatcher.podSecurityContext.fsGroup=4"
         ])
     elif cni_type == "aws-vpc":
         helm_set_values.extend([
-            "cniwatcher.awsVPC.namespace=kube-system"
+            "cniwatcher.aws-vpc.namespace=kube-system"
         ])
 
 yaml = helm(

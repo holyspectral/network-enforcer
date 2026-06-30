@@ -60,40 +60,6 @@ Set namespace based on CNI type
 {{- end }}
 
 {{/*
-Set Pod security context based on CNI type
-*/}}
-{{- define "network-enforcer.cniwatcher.podSecurityContext" -}}
-seccompProfile:
-  type: RuntimeDefault
-{{- $cni := .Values.cniwatcher.cniType }}
-{{- if eq $cni "aws-vpc" }}
-runAsNonRoot: false
-{{- else }}
-runAsNonRoot: true
-{{- end }}
-{{- if eq $cni "flannel" }}
-fsGroup: 4
-{{- end }}
-{{- end }}
-
-{{/*
-Set Container security context based on CNI type
-*/}}
-{{- define "network-enforcer.cniwatcher.containerSecurityContext" -}}
-allowPrivilegeEscalation: false
-readOnlyRootFilesystem: true
-capabilities:
-  drop:
-    - ALL
-{{- $cni := .Values.cniwatcher.cniType }}
-{{- if eq $cni "aws-vpc" }}
-runAsUser: 0
-{{- else }}
-runAsUser: 1000
-{{- end }}
-{{- end }}
-
-{{/*
 Set OTEL endpoint (defaults to controller OTLP service in release namespace)
 */}}
 {{- define "network-enforcer.cniwatcher.otelEndpoint" -}}

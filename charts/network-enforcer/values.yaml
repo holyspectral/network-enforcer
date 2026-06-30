@@ -62,6 +62,12 @@ cniwatcher:
   enabled: true
   # Valid values: aws-vpc, calico, cilium, flannel
   cniType: calico
+  podSecurityContext:
+    runAsNonRoot: true # this should be false for aws-vpc
+    seccompProfile:
+      type: RuntimeDefault
+    # for flannel we should use
+    # fsGroup: 4
   image:
     repository: ghcr.io/rancher-sandbox/network-enforcer/cniwatcher
     tag: v0.1.0
@@ -73,6 +79,12 @@ cniwatcher:
     requests:
       cpu: 10m
       memory: 64Mi
+  containerSecurityContext:
+    runAsUser: 1000 # If CNI type is aws-vpc it needs to be 0.
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
   # Empty string uses {{ release-name }}-otlp.{{ namespace }}.svc.cluster.local:4317
   otelEndpoint: ""
   calico:
