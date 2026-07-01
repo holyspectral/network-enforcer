@@ -25,7 +25,7 @@ helm upgrade --install calico projectcalico/tigera-operator \
   --set installation.enabled=true \
   --set apiServer.enabled=true \
   --set goldmane.enabled=true \
-  --set whisker.enabled=true \
+  --set whisker.enabled=false \
   --set 'installation.calicoNetwork.ipPools[0].name=default-ipv4-ippool' \
   --set 'installation.calicoNetwork.ipPools[0].cidr=10.244.0.0/16' # `10.244.0.0/16` is the default Kind Cluster CIDR
 
