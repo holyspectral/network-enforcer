@@ -17,6 +17,7 @@ printf "\n- 🚀 Install Calico CRDs:\n"
 helm template calico-crds projectcalico/crd.projectcalico.org.v1 --version $CALICO_VERSION | kubectl apply --server-side -f -
 
 printf "\n- 🚀 Deploy tigera-operator:\n"
+# As a dataplane for now we use the default one: Iptables # https://github.com/projectcalico/calico/blob/58949447b523cd9ed372c7cbcf3601c027fa80d8/charts/tigera-operator/values.yaml#L48
 helm upgrade --install calico projectcalico/tigera-operator \
   --version $CALICO_VERSION \
   --namespace tigera-operator \
@@ -27,6 +28,7 @@ helm upgrade --install calico projectcalico/tigera-operator \
   --set goldmane.enabled=true \
   --set whisker.enabled=false \
   --set 'installation.calicoNetwork.ipPools[0].name=default-ipv4-ippool' \
+  --set 'installation.calicoNetwork.linuxDataplane=Iptables' \
   --set 'installation.calicoNetwork.ipPools[0].cidr=10.244.0.0/16' # `10.244.0.0/16` is the default Kind Cluster CIDR
 
 # Wait for the Goldmane certificates to be created
