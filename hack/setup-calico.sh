@@ -9,7 +9,8 @@ helm repo add projectcalico https://docs.tigera.io/calico/charts
 helm repo update
 
 printf "\n- 🚀 Create calico-system namespace:\n"
-kubectl create namespace calico-system
+# we don't want to fail in case of an existing namespace
+kubectl create namespace calico-system --dry-run=client -o yaml | kubectl apply -f -
 
 # Install the CRD first
 printf "\n- 🚀 Install Calico CRDs:\n"
