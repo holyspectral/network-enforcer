@@ -8,6 +8,9 @@ CNIWATCHER_NAMESPACE="${CNIWATCHER_NAMESPACE:-network-enforcer}"
 helm repo add projectcalico https://docs.tigera.io/calico/charts
 helm repo update
 
+printf "\n- 🚀 Create calico-system namespace:\n"
+kubectl create namespace calico-system
+
 # Install the CRD first
 printf "\n- 🚀 Install Calico CRDs:\n"
 helm template calico-crds projectcalico/crd.projectcalico.org.v1 --version $CALICO_VERSION | kubectl apply --server-side -f -

@@ -61,8 +61,6 @@ if cniwatcher_enabled:
             ]
         )
     elif cni_type == "calico":
-        namespace_create("calico-system")
-
         local_resource(
             "setup_calico",
             "CNIWATCHER_NAMESPACE=" + release_namespace + " bash ./hack/setup-calico.sh"
