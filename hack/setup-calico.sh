@@ -30,6 +30,9 @@ printf "\n- 🚀 Wait for goldmane resources to be created:\n"
 kubectl wait --for=create -n calico-system configmap/goldmane-ca-bundle --timeout=120s
 kubectl wait --for=create -n calico-system secret/goldmane-key-pair --timeout=120s
 
+# Wait for goldmane deployment to be ready, this is needed by the cniwatcher to scrape flows
+kubectl wait --for=condition=Available deployment/goldmane -n calico-system --timeout=300s
+
 # Create the secret for the CNI watcher
 printf "\n- 🚀 Creating CNI watcher secret:\n"
 kubectl create secret generic cniwatcher-goldmane-key-pair \
