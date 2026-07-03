@@ -1,3 +1,4 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -30,6 +31,7 @@ rules:
 - apiGroups:
   - security.rancher.io
   resources:
+  - workloadnetworkpolicies
   - workloadnetworkpolicyproposals
   verbs:
   - create
@@ -39,12 +41,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - security.rancher.io
-  resources:
-  - workloadnetworkpolicyproposals/finalizers
-  verbs:
-  - update
 - apiGroups:
   - security.rancher.io
   resources:

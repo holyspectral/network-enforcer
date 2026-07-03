@@ -58,14 +58,19 @@ TARGET=controller cniwatcher
 $(foreach T,$(TARGET),$(eval $(call BUILD_template,$(T))))
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	"$(CONTROLLER_GEN)" "crd:allowDangerousTypes=true" rbac:roleName=manager-role \
-		paths="./..." \
-		output:crd:dir=config/crd/bases \
-		output:rbac:dir=config/rbac
+manifests: controller-gen ## Generate CRDs and RBAC.
+	"$(CONTROLLER_GEN)" crd paths="./api/v1alpha1" \
+		output:crd:artifacts:config=charts/network-enforcer/templates/crd
+	"$(CONTROLLER_GEN)" rbac:roleName=controller-role paths="./internal/controller" \
+		output:rbac:artifacts:config=charts/network-enforcer/templates/controller
+	sed -i 's/controller-role/{{ include "network-enforcer.fullname" . }}-controller/' \
+		charts/network-enforcer/templates/controller/role.yaml
+	# Inject Helm labels after the name line
+	sed -i '/^  name:/a\  labels:\n  {{- include "network-enforcer.labels" . | nindent 4 }}' \
+		charts/network-enforcer/templates/controller/role.yaml
 
 .PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: manifests controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: fmt

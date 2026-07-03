@@ -63,10 +63,10 @@ spec:
                 - monitor
                 - protect
                 type: string
-              policy:
+              policyTemplate:
                 description: |-
-                  Policy is the embedded networking.k8s.io NetworkPolicySpec that this
-                  resource represents at runtime. The semantics of the policy are
+                  PolicyTemplate is the embedded networking.k8s.io NetworkPolicySpec that
+                  this resource represents at runtime. The semantics of the policy are
                   selected by Mode; the spec itself is identical to a NetworkPolicySpec.
                 properties:
                   egress:
@@ -537,7 +537,7 @@ spec:
                     x-kubernetes-list-type: atomic
                 type: object
             required:
-            - policy
+            - policyTemplate
             type: object
         required:
         - spec
