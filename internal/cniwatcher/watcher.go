@@ -27,6 +27,10 @@ const (
 	maxRetryDelay      = 60 * time.Second
 )
 
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
+
 type CNIWatcher interface {
 	Start() error
 	Shutdown() error

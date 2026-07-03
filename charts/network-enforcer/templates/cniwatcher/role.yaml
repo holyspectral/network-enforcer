@@ -1,79 +1,20 @@
 {{- if .Values.cniwatcher.enabled }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: {{ include "network-enforcer.fullname" . }}-cniwatcher
   labels:
-    {{- include "network-enforcer.labels" . | nindent 4 }}
+  {{- include "network-enforcer.labels" . | nindent 4 }}
 rules:
-  - apiGroups:
-    - ""
-    resources:
-    - pods
-    - nodes
-    - services
-    verbs:
-    - get
-    - list
-    - watch
-  {{- if eq .Values.cniwatcher.cniType "calico" }}
-  - apiGroups:
-    - networking.k8s.io
-    resources:
-    - networkpolicies
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - projectcalico.org
-    resources:
-    - networkpolicies
-    - globalnetworkpolicies
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - projectcalico.org
-    resources:
-    - tiers
-    resourceNames:
-    - default
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - projectcalico.org
-    resources:
-    - tier.networkpolicies
-    resourceNames:
-    - default.*
-    verbs:
-    - get
-    - list
-    - watch
-  {{- end }}
-  {{- if eq .Values.cniwatcher.cniType "cilium" }}
-  - apiGroups:
-    - cilium.io
-    resources:
-    - ciliumnetworkpolicies
-    - ciliumclusterwidenetworkpolicies
-    verbs:
-    - get
-    - list
-    - watch
-  {{- end }}
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}
-  {{- if eq .Values.cniwatcher.cniType "flannel" }}
-  - apiGroups:
-    - networking.k8s.io
-    resources:
-    - networkpolicies
-    verbs:
-    - get
-    - list
-    - watch
-  {{- end }}

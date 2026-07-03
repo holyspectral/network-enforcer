@@ -68,6 +68,16 @@ manifests: controller-gen ## Generate CRDs and RBAC.
 	# Inject Helm labels after the name line
 	sed -i '/^  name:/a\  labels:\n  {{- include "network-enforcer.labels" . | nindent 4 }}' \
 		charts/network-enforcer/templates/controller/role.yaml
+	"$(CONTROLLER_GEN)" rbac:roleName=cniwatcher-role paths="./internal/cniwatcher" \
+		output:rbac:artifacts:config=charts/network-enforcer/templates/cniwatcher
+	sed -i 's/cniwatcher-role/{{ include "network-enforcer.fullname" . }}-cniwatcher/' \
+		charts/network-enforcer/templates/cniwatcher/role.yaml
+	sed -i '/^  name:/a\  labels:\n  {{- include "network-enforcer.labels" . | nindent 4 }}' \
+		charts/network-enforcer/templates/cniwatcher/role.yaml
+	# Wrap with enabled conditional
+	sed -i '1s/^/{{- if .Values.cniwatcher.enabled }}\n/' \
+		charts/network-enforcer/templates/cniwatcher/role.yaml
+	echo '{{- end }}' >> charts/network-enforcer/templates/cniwatcher/role.yaml
 
 .PHONY: generate
 generate: manifests controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
