@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -31,6 +32,7 @@ func TestSimpleAppConnectivity(t *testing.T) {
 		Setup(setupSimpleAppWorkload).
 		Setup(generateTraffic).
 		Assess("Check if policy proposals are generated", assessPolicyProposalsGenerated).
+		Assess("Promote proposals into monitor policies", assessPolicyProposalsPromoted).
 		Teardown(teardownSimpleAppWorkload).
 		Teardown(teardownTestNamespace).
 		Feature()
@@ -184,6 +186,39 @@ func assessPolicyProposalsGenerated(ctx context.Context, t *testing.T, _ *envcon
 			requireEqualNetworkPolicyProposal(t, expectedServerIngressProposal,
 				proposal)
 		}
+	}
+	// We return the proposals so that other tests can use them
+	return context.WithValue(ctx, key("proposals"), proposals.Items)
+}
+
+func assessPolicyProposalsPromoted(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+	t.Helper()
+
+	// we recover the proposal from the context.
+	proposals := ctx.Value(key("proposals")).([]securityv1alpha1.WorkloadNetworkPolicyProposal)
+	client := getClient(ctx)
+
+	for _, proposal := range proposals {
+		// We promote the proposal to a network policy.
+		proposal.SetPromotionLabel()
+		require.NoError(t, client.Update(ctx, &proposal),
+			"failed to promote network policy proposal %q", proposal.NamespacedName().String())
+
+		// We expect the policy to be created.
+		var policy securityv1alpha1.WorkloadNetworkPolicy
+		require.Eventually(t, func() bool {
+			return client.Get(ctx, proposal.Name, proposal.Namespace, &policy) == nil
+		}, defaultOperationTimeout, 1*time.Second, "Network policy %q is not created", proposal.NamespacedName().String())
+
+		// Check the policy specs are correct.
+		require.True(t, policy.HasPromotedLabel(proposal.Name))
+		require.Equal(t, securityv1alpha1.WorkloadNetworkPolicyModeMonitor, policy.Spec.Mode)
+		require.Equal(t, proposal.Spec, policy.Spec.PolicyTemplate)
+
+		// We expect the proposal to be deleted
+		require.Eventually(t, func() bool {
+			return apierrors.IsNotFound(client.Get(ctx, proposal.Name, proposal.Namespace, &proposal))
+		}, defaultOperationTimeout, 1*time.Second, "network policy proposal %q was not deleted", proposal.NamespacedName().String())
 	}
 	return ctx
 }
