@@ -133,6 +133,13 @@ func run(logger *slog.Logger, conf *config) error {
 		return fmt.Errorf("unable to setup Enforcement controller: %w", err)
 	}
 
+	if err = (&controller.WorkloadNetworkPolicyProposalReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to setup WorkloadNetworkPolicyProposal controller: %w", err)
+	}
+
 	// +kubebuilder:scaffold:builder
 
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
