@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/jdrews/go-tailer/fswatcher"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"secuity.rancher.io/network-enforcer/internal/types"
 )
 
 const (

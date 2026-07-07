@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"secuity.rancher.io/network-enforcer/internal/ownerkind"
-	"secuity.rancher.io/network-enforcer/internal/topology"
+	"github.com/rancher-sandbox/network-enforcer/internal/ownerkind"
+	"github.com/rancher-sandbox/network-enforcer/internal/topology"
 )
 
 func lookupPodSelectorForWorkload(

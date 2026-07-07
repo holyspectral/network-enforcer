@@ -5,12 +5,12 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/cniwatcher"
+	"github.com/rancher-sandbox/network-enforcer/internal/otel"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"secuity.rancher.io/network-enforcer/internal/cniwatcher"
-	"secuity.rancher.io/network-enforcer/internal/otel"
-	"secuity.rancher.io/network-enforcer/internal/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

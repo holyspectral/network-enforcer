@@ -11,12 +11,12 @@ import (
 	flowpb "github.com/cilium/cilium/api/v1/flow"
 	hubbleObserver "github.com/cilium/cilium/api/v1/observer"
 	monitorApi "github.com/cilium/cilium/pkg/monitor/api"
+	"github.com/rancher-sandbox/network-enforcer/internal/cniwatcher"
+	"github.com/rancher-sandbox/network-enforcer/internal/otel"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"secuity.rancher.io/network-enforcer/internal/cniwatcher"
-	"secuity.rancher.io/network-enforcer/internal/otel"
-	"secuity.rancher.io/network-enforcer/internal/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

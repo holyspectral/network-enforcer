@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"secuity.rancher.io/network-enforcer/internal/types"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 )
 
 func parseCNIType(value string) (types.CNIType, error) {

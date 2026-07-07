@@ -37,11 +37,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	securityv1alpha1 "secuity.rancher.io/network-enforcer/api/v1alpha1"
-	backendkubernetes "secuity.rancher.io/network-enforcer/internal/backend/kubernetes"
-	"secuity.rancher.io/network-enforcer/internal/controller"
-	"secuity.rancher.io/network-enforcer/internal/receiver"
-	"secuity.rancher.io/network-enforcer/internal/topology"
+	securityv1alpha1 "github.com/rancher-sandbox/network-enforcer/api/v1alpha1"
+	backendkubernetes "github.com/rancher-sandbox/network-enforcer/internal/backend/kubernetes"
+	"github.com/rancher-sandbox/network-enforcer/internal/controller"
+	"github.com/rancher-sandbox/network-enforcer/internal/receiver"
+	"github.com/rancher-sandbox/network-enforcer/internal/topology"
 	// +kubebuilder:scaffold:imports
 )
 

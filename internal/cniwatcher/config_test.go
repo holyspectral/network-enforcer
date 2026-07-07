@@ -3,10 +3,10 @@ package cniwatcher_test
 import (
 	"testing"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/cniwatcher"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"secuity.rancher.io/network-enforcer/internal/cniwatcher"
-	"secuity.rancher.io/network-enforcer/internal/types"
 )
 
 func TestParseCNIType(t *testing.T) {

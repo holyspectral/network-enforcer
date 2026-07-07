@@ -4,7 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	securityv1alpha1 "secuity.rancher.io/network-enforcer/api/v1alpha1"
+	securityv1alpha1 "github.com/rancher-sandbox/network-enforcer/api/v1alpha1"
 )
 
 type PolicyBackend interface {

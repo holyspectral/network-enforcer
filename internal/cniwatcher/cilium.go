@@ -8,11 +8,11 @@ import (
 	flowpb "github.com/cilium/cilium/api/v1/flow"
 	hubbleObserver "github.com/cilium/cilium/api/v1/observer"
 	monitorApi "github.com/cilium/cilium/pkg/monitor/api"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"secuity.rancher.io/network-enforcer/internal/types"
 )
 
 type CiliumWatcher struct {
