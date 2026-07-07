@@ -166,7 +166,6 @@ $(LOCALBIN):
 	mkdir -p "$(LOCALBIN)"
 
 ## Tool Binaries
-KIND ?= kind
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint

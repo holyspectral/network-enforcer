@@ -17,8 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"errors"
+	"fmt"
+
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // WorkloadNetworkPolicyMode selects how a WorkloadNetworkPolicy is interpreted
@@ -77,4 +81,42 @@ type WorkloadNetworkPolicyList struct {
 	metav1.ListMeta `json:"metadata,omitzero"`
 
 	Items []WorkloadNetworkPolicy `json:"items"`
+}
+
+func (wnp *WorkloadNetworkPolicy) NamespacedName() types.NamespacedName {
+	if wnp == nil {
+		return types.NamespacedName{}
+	}
+
+	return types.NamespacedName{
+		Namespace: wnp.Namespace,
+		Name:      wnp.Name,
+	}
+}
+
+func (wnp *WorkloadNetworkPolicy) SetPromotedLabel(proposalName string) error {
+	if wnp == nil {
+		return errors.New("WorkloadNetworkPolicy is nil")
+	}
+
+	// k8s labels must have 63 chars or less.
+	// We catch here the error instead of letting the API server handle it.
+	const maxLabelValueLength = 63
+	if len(proposalName) > maxLabelValueLength {
+		return fmt.Errorf("proposalName %q is too long", proposalName)
+	}
+
+	if wnp.Labels == nil {
+		wnp.SetLabels(map[string]string{})
+	}
+
+	wnp.Labels[PolicyPromotedFromLabelKey] = proposalName
+	return nil
+}
+
+func (wnp *WorkloadNetworkPolicy) HasPromotedLabel(proposalName string) bool {
+	if wnp == nil {
+		return false
+	}
+	return wnp.Labels[PolicyPromotedFromLabelKey] == proposalName
 }

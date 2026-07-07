@@ -121,7 +121,7 @@ func TestNewConfig(t *testing.T) {
 			expectedEndpoint: types.DefaultHubbleEndpoint,
 		},
 		{
-			name:             "Valid Cilium config with enpty endpoint",
+			name:             "Valid Cilium config with empty endpoint",
 			nodeName:         "test-node",
 			cniType:          "cilium",
 			connEndpoint:     "",

@@ -61,18 +61,22 @@ func (ts *TopologyScanner) Start(ctx context.Context) error {
 	}
 }
 
+func getProposalName(workload topology.WorkloadKey, direction networkingv1.PolicyType) string {
+	return fmt.Sprintf(
+		"%s-%s-%s",
+		strings.ToLower(string(workload.OwnerKind)),
+		workload.OwnerName,
+		strings.ToLower(string(direction)),
+	)
+}
+
 func getProposalMetadata(
 	workload topology.WorkloadKey,
 	direction networkingv1.PolicyType,
 ) *securityv1alpha1.WorkloadNetworkPolicyProposal {
 	return &securityv1alpha1.WorkloadNetworkPolicyProposal{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf(
-				"%s-%s-%s",
-				strings.ToLower(string(workload.OwnerKind)),
-				workload.OwnerName,
-				strings.ToLower(string(direction)),
-			),
+			Name:      getProposalName(workload, direction),
 			Namespace: workload.Namespace,
 		},
 	}
@@ -160,25 +164,30 @@ func (ts *TopologyScanner) reconcileProposal(
 		return errors.New("no peers associated to the workload")
 	}
 	proposal := getProposalMetadata(workload, direction)
-	_, err := controllerutil.CreateOrUpdate(ctx, ts.client, proposal, func() error {
+
+	alreadyPromoted, err := hasPromotedPolicy(ctx, ts.client, proposal.Namespace, proposal.Name)
+	if err != nil {
+		return fmt.Errorf("checking promoted policy for proposal %s/%s: %w", proposal.Namespace, proposal.Name, err)
+	}
+	if alreadyPromoted {
+		return nil
+	}
+
+	if _, err = controllerutil.CreateOrUpdate(ctx, ts.client, proposal, func() error {
 		// we recompute the selector only if we are creating the resource the first time.
 		// we could continuously recompute the selector if we want to keep track of updates.
 		// the policyTypes should be empty only when the resource is new.
 		if len(proposal.Spec.PolicyTypes) == 0 {
-			workloadSelector, err := selectorFromWorkloadKey(ctx, ts.client, workload)
+			var workloadSelector metav1.LabelSelector
+			workloadSelector, err = selectorFromWorkloadKey(ctx, ts.client, workload)
 			if err != nil {
 				return fmt.Errorf("resolving workload selector: %w", err)
 			}
 			proposal.Spec.PodSelector = workloadSelector
 			proposal.Spec.PolicyTypes = []networkingv1.PolicyType{direction}
 		}
-
-		if err := ts.buildSpec(ctx, direction, &proposal.Spec, deltaPeers); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+		return ts.buildSpec(ctx, direction, &proposal.Spec, deltaPeers)
+	}); err != nil {
 		return fmt.Errorf("create or update proposal %s/%s: %w", proposal.Namespace, proposal.Name, err)
 	}
 

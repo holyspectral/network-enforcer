@@ -292,7 +292,7 @@ type PolicyDenyEvent struct {
 
 ```mermaid
 flowchart TD
-    A(CNI Pluggin)
+    A(CNI Plugin)
     B(Log Parser)
     C(OTLP gRPC Exporter)
     D(OTeL Collector)

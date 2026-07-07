@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type WorkloadNetworkPolicyProposalStatus struct {
@@ -54,4 +55,32 @@ type WorkloadNetworkPolicyProposalList struct {
 	metav1.ListMeta `json:"metadata,omitzero"`
 
 	Items []WorkloadNetworkPolicyProposal `json:"items"`
+}
+
+func (wnpp *WorkloadNetworkPolicyProposal) NamespacedName() types.NamespacedName {
+	if wnpp == nil {
+		return types.NamespacedName{}
+	}
+
+	return types.NamespacedName{
+		Namespace: wnpp.Namespace,
+		Name:      wnpp.Name,
+	}
+}
+
+func (wnpp *WorkloadNetworkPolicyProposal) SetPromotionLabel() {
+	if wnpp == nil {
+		return
+	}
+	if wnpp.Labels == nil {
+		wnpp.SetLabels(map[string]string{})
+	}
+	wnpp.Labels[ProposalPromoteLabelKey] = "true"
+}
+
+func (wnpp *WorkloadNetworkPolicyProposal) HasPromotionLabel() bool {
+	if wnpp == nil {
+		return false
+	}
+	return wnpp.Labels[ProposalPromoteLabelKey] == "true"
 }
