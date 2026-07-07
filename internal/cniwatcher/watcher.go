@@ -11,11 +11,11 @@ import (
 
 	"github.com/jdrews/go-tailer/fswatcher"
 	"github.com/jdrews/go-tailer/glob"
+	"github.com/rancher-sandbox/network-enforcer/internal/otel"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"secuity.rancher.io/network-enforcer/internal/otel"
-	"secuity.rancher.io/network-enforcer/internal/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

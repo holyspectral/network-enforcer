@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	securityv1alpha1 "secuity.rancher.io/network-enforcer/api/v1alpha1"
-	"secuity.rancher.io/network-enforcer/internal/topology"
+	securityv1alpha1 "github.com/rancher-sandbox/network-enforcer/api/v1alpha1"
+	"github.com/rancher-sandbox/network-enforcer/internal/topology"
 )
 
 const (

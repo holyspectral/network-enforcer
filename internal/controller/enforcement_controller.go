@@ -29,8 +29,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	securityv1alpha1 "secuity.rancher.io/network-enforcer/api/v1alpha1"
-	"secuity.rancher.io/network-enforcer/internal/backend"
+	securityv1alpha1 "github.com/rancher-sandbox/network-enforcer/api/v1alpha1"
+	"github.com/rancher-sandbox/network-enforcer/internal/backend"
 )
 
 const enforceLabelKey = "security.rancher.io/enforce"

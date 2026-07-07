@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/cniwatcher"
+	pb "github.com/rancher-sandbox/network-enforcer/internal/cniwatcher/calico/goldmane"
+	"github.com/rancher-sandbox/network-enforcer/internal/otel"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"secuity.rancher.io/network-enforcer/internal/cniwatcher"
-	pb "secuity.rancher.io/network-enforcer/internal/cniwatcher/calico/goldmane"
-	"secuity.rancher.io/network-enforcer/internal/otel"
-	"secuity.rancher.io/network-enforcer/internal/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

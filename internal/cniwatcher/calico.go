@@ -8,12 +8,12 @@ import (
 	"os"
 	"path/filepath"
 
+	pb "github.com/rancher-sandbox/network-enforcer/internal/cniwatcher/calico/goldmane"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pb "secuity.rancher.io/network-enforcer/internal/cniwatcher/calico/goldmane"
-	"secuity.rancher.io/network-enforcer/internal/types"
 )
 
 const (

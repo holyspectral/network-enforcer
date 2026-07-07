@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"secuity.rancher.io/network-enforcer/internal/ownerkind"
+	"github.com/rancher-sandbox/network-enforcer/internal/ownerkind"
 )
 
 func TestStore_Record_DeduplicatesSameFlow(t *testing.T) {

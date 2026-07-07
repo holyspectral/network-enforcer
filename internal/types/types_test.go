@@ -3,9 +3,9 @@ package types_test
 import (
 	"testing"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"secuity.rancher.io/network-enforcer/internal/types"
 )
 
 func TestPolicy_String(t *testing.T) {

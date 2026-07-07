@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"secuity.rancher.io/network-enforcer/internal/cniwatcher"
-	"secuity.rancher.io/network-enforcer/internal/otel"
+	"github.com/rancher-sandbox/network-enforcer/internal/cniwatcher"
+	"github.com/rancher-sandbox/network-enforcer/internal/otel"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )

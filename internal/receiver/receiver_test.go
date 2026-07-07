@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"secuity.rancher.io/network-enforcer/internal/ownerkind"
-	"secuity.rancher.io/network-enforcer/internal/topology"
+	"github.com/rancher-sandbox/network-enforcer/internal/ownerkind"
+	"github.com/rancher-sandbox/network-enforcer/internal/topology"
 )
 
 type testLogWriter struct {

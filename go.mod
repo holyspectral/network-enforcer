@@ -1,4 +1,4 @@
-module secuity.rancher.io/network-enforcer
+module github.com/rancher-sandbox/network-enforcer
 
 go 1.26.0
 

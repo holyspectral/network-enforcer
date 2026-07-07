@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/otel"
+	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"github.com/stretchr/testify/assert"
-	"secuity.rancher.io/network-enforcer/internal/otel"
-	"secuity.rancher.io/network-enforcer/internal/types"
 )
 
 func TestNewOpenTelemetryService(t *testing.T) {
