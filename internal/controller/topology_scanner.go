@@ -20,6 +20,11 @@ import (
 	"github.com/rancher-sandbox/network-enforcer/internal/topology"
 )
 
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets;daemonsets,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=pods;services;namespaces,verbs=get;list;watch
+// +kubebuilder:rbac:groups=security.rancher.io,resources=workloadnetworkpolicyproposals,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=security.rancher.io,resources=workloadnetworkpolicies,verbs=get;list;watch
+
 const (
 	namespaceLabelKey = "kubernetes.io/metadata.name"
 )
