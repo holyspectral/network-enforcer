@@ -18,7 +18,6 @@ func TestNewOpenTelemetryService(t *testing.T) {
 	cfg := otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	}
 	service := otel.NewOpenTelemetryService(cfg)
@@ -34,7 +33,6 @@ func TestOtelService_Start(t *testing.T) {
 	cfg := otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	}
 	service := otel.NewOpenTelemetryService(cfg)
@@ -54,7 +52,6 @@ func TestOtelService_EmitPolicyDenyEvent(t *testing.T) {
 	cfg := otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	}
 	service := otel.NewOpenTelemetryService(cfg)
@@ -81,7 +78,6 @@ func TestOtelService_Shutdown(t *testing.T) {
 	cfg := otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	}
 	service := otel.NewOpenTelemetryService(cfg)

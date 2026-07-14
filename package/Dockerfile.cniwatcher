@@ -1,5 +1,4 @@
 FROM registry.suse.com/bci/golang:1.26 AS builder
-ARG CNIWATCHER_VERSION
 WORKDIR /src
 COPY api/ /src/api
 COPY cmd/ /src/cmd
@@ -7,7 +6,8 @@ COPY proto/ /src/proto
 COPY internal/ /src/internal
 COPY go.mod go.sum /src/
 COPY Makefile /src/
-RUN make cniwatcher CNIWATCHER_VERSION=${CNIWATCHER_VERSION}
+COPY .git /src/.git
+RUN make cniwatcher
 
 FROM scratch
 WORKDIR /

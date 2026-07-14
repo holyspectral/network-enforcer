@@ -21,7 +21,6 @@ func TestNewCNIWatcher(t *testing.T) {
 	otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	})
 
@@ -129,7 +128,6 @@ func TestWatcher_ProcessPolicyDenyEvent(t *testing.T) {
 	otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	})
 

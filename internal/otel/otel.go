@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"time"
 
 	"github.com/rancher-sandbox/network-enforcer/internal/types"
@@ -17,14 +18,32 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const DefaultOtelServiceVersion = "v1.0.0"
 const DefaultOtelCollectorEndpoint = "localhost:4317"
 
 type OpenTelemetryConfig struct {
 	Ctx               context.Context
 	Log               *slog.Logger
-	ServiceVersion    string
 	CollectorEndpoint string
+}
+
+// buildVersion reads the binary's version from Go's embedded build metadata.
+// It prefers the module version (set when installed via go install module@vX.Y.Z),
+// falls back to the VCS commit hash (embedded when .git is present at build time),
+// and returns "unknown" if neither is available.
+func buildVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+	if info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" && s.Value != "" {
+			return s.Value
+		}
+	}
+	return "unknown"
 }
 
 type OpenTelemetryService struct {
@@ -45,10 +64,6 @@ func NewOpenTelemetryService(cfg OpenTelemetryConfig) *Service {
 }
 
 func (s *Service) Start() error {
-	if s.Config.ServiceVersion == "" {
-		s.Config.ServiceVersion = DefaultOtelServiceVersion
-	}
-
 	if s.Config.CollectorEndpoint == "" {
 		s.Config.CollectorEndpoint = DefaultOtelCollectorEndpoint
 	}
@@ -64,7 +79,7 @@ func (s *Service) Start() error {
 	res, err := resource.New(s.Config.Ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String("cniwatcher"),
-			semconv.ServiceVersionKey.String(s.Config.ServiceVersion),
+			semconv.ServiceVersionKey.String(buildVersion()),
 		),
 	)
 	if err != nil {
