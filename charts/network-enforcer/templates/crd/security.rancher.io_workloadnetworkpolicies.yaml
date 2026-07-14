@@ -20,6 +20,9 @@ spec:
     - jsonPath: .spec.mode
       name: Mode
       type: string
+    - jsonPath: .status.activeViolationCount
+      name: Active Violations
+      type: integer
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -539,9 +542,261 @@ spec:
             required:
             - policyTemplate
             type: object
+          status:
+            description: |-
+              WorkloadNetworkPolicyStatus defines the observed state of a
+              WorkloadNetworkPolicy.
+            properties:
+              acknowledgedViolations:
+                description: |-
+                  AcknowledgedViolations is the list of the most recent violation
+                  records that have been acknowledged by users (max maxViolationRecords).
+                  Oldest entries are dropped when the limit is reached.
+                items:
+                  description: |-
+                    AcknowledgedViolationRecord wraps a ViolationRecord together with the
+                    acknowledgement reason and timestamp.
+                  properties:
+                    acknowledgedAt:
+                      description: AcknowledgedAt is the time when the violation was
+                        acknowledged.
+                      format: date-time
+                      type: string
+                    reason:
+                      description: |-
+                        Reason is an optional field to indicate why this violation was
+                        acknowledged.
+                      type: string
+                    violation:
+                      description: Violation is the violation record that was acknowledged.
+                      properties:
+                        action:
+                          description: |-
+                            Action is the enforcement action ("protect", the only mode that produces
+                            denies).
+                          type: string
+                        denyingPolicyName:
+                          description: DenyingPolicyName is the name of the NetworkPolicy
+                            that denied the flow.
+                          type: string
+                        denyingPolicyNamespace:
+                          description: |-
+                            DenyingPolicyNamespace is the namespace of the NetworkPolicy that denied
+                            the flow.
+                          type: string
+                        dest:
+                          description: Dest is the workload that received the traffic.
+                          properties:
+                            namespace:
+                              description: Namespace is the Kubernetes namespace of
+                                the workload.
+                              type: string
+                            ownerKind:
+                              description: |-
+                                OwnerKind is the kind of the owner resource (e.g. Deployment, StatefulSet,
+                                DaemonSet).
+                              type: string
+                            ownerName:
+                              description: OwnerName is the name of the owner resource.
+                              type: string
+                          type: object
+                        direction:
+                          description: 'Direction is the traffic direction: "egress"
+                            or "ingress".'
+                          type: string
+                        dstPort:
+                          description: |-
+                            DstPort is the destination port. 0 when unavailable (ICMP, or backends
+                            that don't expose it).
+                          format: int32
+                          maximum: 65535
+                          minimum: 0
+                          type: integer
+                        id:
+                          description: |-
+                            ID is a per-policy unique identifier allocated by the controller
+                            when the record is first observed. It is stable across re-scrapes
+                            of the same logical violation, so consumers can refer to a single
+                            record by ID (for example when correlating with external events).
+
+                            Stored as int64 (not uint64) for compatibility with the Kubernetes
+                            field-management machinery used by controller-runtime's test
+                            fixtures; the counter is monotonically increasing and never goes
+                            negative, so the sign bit is never set in practice.
+                          format: int64
+                          type: integer
+                        nodeName:
+                          description: NodeName is the node whose cniwatcher reported
+                            the violation.
+                          type: string
+                        protocol:
+                          description: Protocol is the L4 protocol (TCP, UDP, SCTP,
+                            ICMP …).
+                          type: string
+                        source:
+                          description: Source is the workload that initiated the traffic.
+                          properties:
+                            namespace:
+                              description: Namespace is the Kubernetes namespace of
+                                the workload.
+                              type: string
+                            ownerKind:
+                              description: |-
+                                OwnerKind is the kind of the owner resource (e.g. Deployment, StatefulSet,
+                                DaemonSet).
+                              type: string
+                            ownerName:
+                              description: OwnerName is the name of the owner resource.
+                              type: string
+                          type: object
+                        timestamp:
+                          description: Timestamp is when the violation last occurred.
+                          format: date-time
+                          type: string
+                      required:
+                      - action
+                      - direction
+                      - id
+                      - nodeName
+                      - protocol
+                      - timestamp
+                      type: object
+                  required:
+                  - violation
+                  type: object
+                type: array
+              activeViolationCount:
+                default: 0
+                description: |-
+                  ActiveViolationCount is the number of currently active (non-cleared)
+                  violation records. It is always equal to len(Violations) and is
+                  updated in the same status write.
+                format: int64
+                type: integer
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the most recent generation observed for this
+                  WorkloadNetworkPolicy. It corresponds to the resource's
+                  metadata.generation, which is updated by the API server when the
+                  spec changes.
+                format: int64
+                type: integer
+              violationCount:
+                default: 0
+                description: |-
+                  ViolationCount is the total number of violation records ever
+                  observed for this policy, including those that have already been
+                  trimmed out of Violations or cleared because the flow is now
+                  permitted by the policy template. It is not guaranteed to be strongly
+                  consistent and may be temporarily outdated.
+                format: int64
+                type: integer
+              violations:
+                description: |-
+                  Violations is the list of the most recent violation records
+                  (max maxViolationRecords). Oldest entries are dropped when the
+                  limit is reached.
+                items:
+                  description: ViolationRecord holds the details of a single network
+                    policy violation.
+                  properties:
+                    action:
+                      description: |-
+                        Action is the enforcement action ("protect", the only mode that produces
+                        denies).
+                      type: string
+                    denyingPolicyName:
+                      description: DenyingPolicyName is the name of the NetworkPolicy
+                        that denied the flow.
+                      type: string
+                    denyingPolicyNamespace:
+                      description: |-
+                        DenyingPolicyNamespace is the namespace of the NetworkPolicy that denied
+                        the flow.
+                      type: string
+                    dest:
+                      description: Dest is the workload that received the traffic.
+                      properties:
+                        namespace:
+                          description: Namespace is the Kubernetes namespace of the
+                            workload.
+                          type: string
+                        ownerKind:
+                          description: |-
+                            OwnerKind is the kind of the owner resource (e.g. Deployment, StatefulSet,
+                            DaemonSet).
+                          type: string
+                        ownerName:
+                          description: OwnerName is the name of the owner resource.
+                          type: string
+                      type: object
+                    direction:
+                      description: 'Direction is the traffic direction: "egress" or
+                        "ingress".'
+                      type: string
+                    dstPort:
+                      description: |-
+                        DstPort is the destination port. 0 when unavailable (ICMP, or backends
+                        that don't expose it).
+                      format: int32
+                      maximum: 65535
+                      minimum: 0
+                      type: integer
+                    id:
+                      description: |-
+                        ID is a per-policy unique identifier allocated by the controller
+                        when the record is first observed. It is stable across re-scrapes
+                        of the same logical violation, so consumers can refer to a single
+                        record by ID (for example when correlating with external events).
+
+                        Stored as int64 (not uint64) for compatibility with the Kubernetes
+                        field-management machinery used by controller-runtime's test
+                        fixtures; the counter is monotonically increasing and never goes
+                        negative, so the sign bit is never set in practice.
+                      format: int64
+                      type: integer
+                    nodeName:
+                      description: NodeName is the node whose cniwatcher reported
+                        the violation.
+                      type: string
+                    protocol:
+                      description: Protocol is the L4 protocol (TCP, UDP, SCTP, ICMP
+                        …).
+                      type: string
+                    source:
+                      description: Source is the workload that initiated the traffic.
+                      properties:
+                        namespace:
+                          description: Namespace is the Kubernetes namespace of the
+                            workload.
+                          type: string
+                        ownerKind:
+                          description: |-
+                            OwnerKind is the kind of the owner resource (e.g. Deployment, StatefulSet,
+                            DaemonSet).
+                          type: string
+                        ownerName:
+                          description: OwnerName is the name of the owner resource.
+                          type: string
+                      type: object
+                    timestamp:
+                      description: Timestamp is when the violation last occurred.
+                      format: date-time
+                      type: string
+                  required:
+                  - action
+                  - direction
+                  - id
+                  - nodeName
+                  - protocol
+                  - timestamp
+                  type: object
+                type: array
+            type: object
         required:
         - spec
         type: object
     served: true
     storage: true
-    subresources: {}
+    subresources:
+      status: {}
