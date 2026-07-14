@@ -17,13 +17,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const DefaultOtelServiceVersion = "v1.0.0"
 const DefaultOtelCollectorEndpoint = "localhost:4317"
 
 type OpenTelemetryConfig struct {
 	Ctx               context.Context
 	Log               *slog.Logger
-	ServiceVersion    string
 	CollectorEndpoint string
 }
 
@@ -45,10 +43,6 @@ func NewOpenTelemetryService(cfg OpenTelemetryConfig) *Service {
 }
 
 func (s *Service) Start() error {
-	if s.Config.ServiceVersion == "" {
-		s.Config.ServiceVersion = DefaultOtelServiceVersion
-	}
-
 	if s.Config.CollectorEndpoint == "" {
 		s.Config.CollectorEndpoint = DefaultOtelCollectorEndpoint
 	}
@@ -64,7 +58,6 @@ func (s *Service) Start() error {
 	res, err := resource.New(s.Config.Ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String("cniwatcher"),
-			semconv.ServiceVersionKey.String(s.Config.ServiceVersion),
 		),
 	)
 	if err != nil {

@@ -18,9 +18,6 @@ import (
 
 const otelShutdownTimeout = 10 * time.Second
 
-//nolint:gochecknoglobals // this is set by the build process
-var CniWatcherVersion string
-
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
@@ -29,7 +26,6 @@ func main() {
 	otelCfg := otel.OpenTelemetryConfig{
 		Ctx:               ctx,
 		Log:               logger,
-		ServiceVersion:    CniWatcherVersion,
 		CollectorEndpoint: os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 	}
 	otelService := otel.NewOpenTelemetryService(otelCfg)
