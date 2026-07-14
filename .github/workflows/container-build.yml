@@ -1,0 +1,65 @@
+name: Build, Sign, and Generate SBOM, Attestation & Provenance
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+
+  push:
+    branches:
+      - "main"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        component: [controller, cniwatcher]
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write    # Push images to ghcr.io
+      id-token: write    # Sign images with cosign (OIDC)
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Build image
+        uses: rancher-sandbox/runtime-enforcer/.github/actions/container-build@3ef087afd4c8131a1eacdd84873b7ddcaa13beaf
+        with:
+          arch: ${{ matrix.arch }}
+          dockerfile: package/Dockerfile.${{ matrix.component }}
+          image: ${{ matrix.component }}
+          repo: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        component: [controller, cniwatcher]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Merge images
+        uses: rancher-sandbox/runtime-enforcer/.github/actions/merge-multiarch@3ef087afd4c8131a1eacdd84873b7ddcaa13beaf
+        with:
+          arch: amd64,arm64
+          image: ${{ matrix.component }}
+          repo: ${{ github.repository }}
+          tag: ${{ inputs.version || 'latest' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
