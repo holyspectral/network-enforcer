@@ -8,6 +8,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	securityv1alpha1 "github.com/rancher-sandbox/network-enforcer/api/v1alpha1"
 )
 
 func protocolPtr(p corev1.Protocol) *corev1.Protocol {
@@ -32,11 +34,11 @@ func TestContainsRuleEgress(t *testing.T) {
 	udp := protocolPtr(corev1.ProtocolUDP)
 
 	frontend := networkingv1.NetworkPolicyPeer{
-		NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "team-a"}),
+		NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "team-a"}),
 		PodSelector:       labelSelector(map[string]string{"app": "frontend"}),
 	}
 	backend := networkingv1.NetworkPolicyPeer{
-		NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "team-b"}),
+		NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "team-b"}),
 		PodSelector:       labelSelector(map[string]string{"app": "backend"}),
 	}
 
@@ -101,7 +103,7 @@ func TestContainsRuleEgress(t *testing.T) {
 			name: "does not match with different selector",
 			newRule: networkingv1.NetworkPolicyEgressRule{
 				To: []networkingv1.NetworkPolicyPeer{{
-					NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "team-a"}),
+					NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "team-a"}),
 					PodSelector:       labelSelector(map[string]string{"app": "frontend-v2"}),
 				}},
 				Ports: []networkingv1.NetworkPolicyPort{{Protocol: tcp, Port: portPtr(443)}},
@@ -116,7 +118,7 @@ func TestContainsRuleEgress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := containsRule(tt.newRule, tt.existing, egressRuleEqual)
+			got := containsRule(tt.newRule, tt.existing, securityv1alpha1.EgressRuleEqual)
 			if got != tt.want {
 				t.Fatalf("rule exists = %v, want %v", got, tt.want)
 			}
@@ -128,11 +130,11 @@ func TestContainsRuleIngress(t *testing.T) {
 	tcp := protocolPtr(corev1.ProtocolTCP)
 
 	clientPeer := networkingv1.NetworkPolicyPeer{
-		NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "client-ns"}),
+		NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "client-ns"}),
 		PodSelector:       labelSelector(map[string]string{"app": "client"}),
 	}
 	proxyPeer := networkingv1.NetworkPolicyPeer{
-		NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "proxy-ns"}),
+		NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "proxy-ns"}),
 		PodSelector:       labelSelector(map[string]string{"app": "proxy"}),
 	}
 
@@ -185,7 +187,7 @@ func TestContainsRuleIngress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := containsRule(tt.newRule, tt.existing, ingressRuleEqual)
+			got := containsRule(tt.newRule, tt.existing, securityv1alpha1.IngressRuleEqual)
 			if got != tt.want {
 				t.Fatalf("rule exists = %v, want %v", got, tt.want)
 			}
@@ -230,7 +232,7 @@ func TestNormalizeSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := selectorEqual(tt.a, tt.b)
+			got := securityv1alpha1.SelectorEqual(tt.a, tt.b)
 			if got != tt.want {
 				t.Fatalf("selector equality = %v, want %v", got, tt.want)
 			}
@@ -297,9 +299,9 @@ func TestIPBlockEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ipBlockEqual(tt.a, tt.b)
+			got := securityv1alpha1.IPBlockEqual(tt.a, tt.b)
 			if got != tt.want {
-				t.Fatalf("ipBlockEqual() = %v, want %v", got, tt.want)
+				t.Fatalf("securityv1alpha1.IPBlockEqual() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -315,7 +317,7 @@ func TestPolicyPeerEqual(t *testing.T) {
 		{
 			name: "matches selectors with expression order differences",
 			a: networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "ns-a"}),
+				NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "ns-a"}),
 				PodSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "frontend"},
 					MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -327,7 +329,7 @@ func TestPolicyPeerEqual(t *testing.T) {
 				IPBlock: &networkingv1.IPBlock{CIDR: "10.0.0.0/24", Except: []string{"10.0.0.8/32", "10.0.0.9/32"}},
 			},
 			b: networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "ns-a"}),
+				NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "ns-a"}),
 				PodSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "frontend"},
 					MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -343,10 +345,10 @@ func TestPolicyPeerEqual(t *testing.T) {
 		{
 			name: "does not match different namespace selector",
 			a: networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "ns-a"}),
+				NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "ns-a"}),
 			},
 			b: networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: labelSelector(map[string]string{namespaceLabelKey: "ns-b"}),
+				NamespaceSelector: labelSelector(map[string]string{securityv1alpha1.NamespaceLabelKey: "ns-b"}),
 			},
 			want: false,
 		},
@@ -364,9 +366,9 @@ func TestPolicyPeerEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := policyPeerEqual(tt.a, tt.b)
+			got := securityv1alpha1.PolicyPeerEqual(tt.a, tt.b)
 			if got != tt.want {
-				t.Fatalf("policyPeerEqual() = %v, want %v", got, tt.want)
+				t.Fatalf("securityv1alpha1.PolicyPeerEqual() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -436,7 +438,7 @@ func TestPolicyPortEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, policyPortEqual(tt.a, tt.b))
+			require.Equal(t, tt.want, securityv1alpha1.PolicyPortEqual(tt.a, tt.b))
 		})
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 	"strings"
 	"time"
 
@@ -24,10 +23,6 @@ import (
 // +kubebuilder:rbac:groups="",resources=pods;services;namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=security.rancher.io,resources=workloadnetworkpolicyproposals,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=security.rancher.io,resources=workloadnetworkpolicies,verbs=get;list;watch
-
-const (
-	namespaceLabelKey = "kubernetes.io/metadata.name"
-)
 
 type TopologyScanner struct {
 	client   client.Client
@@ -208,68 +203,6 @@ func containsRule[T any](newRule T, existing []T, equalFn func(T, T) bool) bool 
 	return false
 }
 
-func selectorEqual(a, b *metav1.LabelSelector) bool {
-	return metav1.FormatLabelSelector(a) == metav1.FormatLabelSelector(b)
-}
-
-func ipBlockEqual(a, b *networkingv1.IPBlock) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-	if a.CIDR != b.CIDR {
-		return false
-	}
-	return equalUnordered(a.Except, b.Except, func(left, right string) bool {
-		return left == right
-	})
-}
-
-func policyPeerEqual(a, b networkingv1.NetworkPolicyPeer) bool {
-	return selectorEqual(a.NamespaceSelector, b.NamespaceSelector) &&
-		selectorEqual(a.PodSelector, b.PodSelector) &&
-		ipBlockEqual(a.IPBlock, b.IPBlock)
-}
-
-func policyPortEqual(a, b networkingv1.NetworkPolicyPort) bool {
-	return reflect.DeepEqual(a, b)
-}
-
-func equalUnordered[T any](left, right []T, equalFn func(T, T) bool) bool {
-	if len(left) != len(right) {
-		return false
-	}
-
-	used := make([]bool, len(right))
-	for _, leftItem := range left {
-		matched := false
-		for i, rightItem := range right {
-			if used[i] {
-				continue
-			}
-			if equalFn(leftItem, rightItem) {
-				used[i] = true
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-
-	return true
-}
-
-func egressRuleEqual(a, b networkingv1.NetworkPolicyEgressRule) bool {
-	return equalUnordered(a.To, b.To, policyPeerEqual) &&
-		equalUnordered(a.Ports, b.Ports, policyPortEqual)
-}
-
-func ingressRuleEqual(a, b networkingv1.NetworkPolicyIngressRule) bool {
-	return equalUnordered(a.From, b.From, policyPeerEqual) &&
-		equalUnordered(a.Ports, b.Ports, policyPortEqual)
-}
-
 func (ts *TopologyScanner) buildSpec(
 	ctx context.Context,
 	direction networkingv1.PolicyType,
@@ -283,7 +216,7 @@ func (ts *TopologyScanner) buildSpec(
 			return err
 		}
 		for _, rule := range deltaRules {
-			if containsRule(rule, spec.Egress, egressRuleEqual) {
+			if containsRule(rule, spec.Egress, securityv1alpha1.EgressRuleEqual) {
 				continue
 			}
 			spec.Egress = append(spec.Egress, rule)
@@ -295,7 +228,7 @@ func (ts *TopologyScanner) buildSpec(
 		}
 
 		for _, rule := range deltaRules {
-			if containsRule(rule, spec.Ingress, ingressRuleEqual) {
+			if containsRule(rule, spec.Ingress, securityv1alpha1.IngressRuleEqual) {
 				continue
 			}
 			spec.Ingress = append(spec.Ingress, rule)
@@ -365,7 +298,7 @@ func (ts *TopologyScanner) buildPeerRuleParts(
 	policyPeer := networkingv1.NetworkPolicyPeer{
 		NamespaceSelector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				namespaceLabelKey: peer.Namespace,
+				securityv1alpha1.NamespaceLabelKey: peer.Namespace,
 			},
 		},
 		PodSelector: &peerSelector,
