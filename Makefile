@@ -123,12 +123,9 @@ build: generate fmt vet ## Build manager binary.
 controller: fmt ## Build controller binary.
 	CGO_ENABLED=0 GOOS=linux go build -o bin/controller cmd/netenforcer/main.go
 
-CNIWATCHER_VERSION ?= $(shell git describe --tags --dirty --always 2>/dev/null || echo "v0.0.0")
-CNIWATCHER_LDFLAGS := -X main.CniWatcherVersion=$(CNIWATCHER_VERSION)
-
 .PHONY: cniwatcher
 cniwatcher: fmt vet ## Build cniwatcher binary.
-	CGO_ENABLED=0 GOOS=linux go build -ldflags "$(CNIWATCHER_LDFLAGS)" -o bin/cniwatcher ./cmd/cniwatcher
+	CGO_ENABLED=0 GOOS=linux go build -o bin/cniwatcher ./cmd/cniwatcher
 
 .PHONY: run
 run: generate fmt vet ## Run a controller from your host.
@@ -270,7 +267,7 @@ generate-calico-goldmane-proto: download-calico-goldmane-proto ## Generate Go co
 
 .PHONY: build-cniwatcher-image
 build-cniwatcher-image:
-	$(CONTAINER_TOOL) build -t cniwatcher:latest --build-arg CNIWATCHER_VERSION=$(CNIWATCHER_VERSION) -f package/Dockerfile.cniwatcher .
+	$(CONTAINER_TOOL) build -t cniwatcher:latest -f package/Dockerfile.cniwatcher .
 
 .PHONY: test-e2e
 test-e2e: build-controller-image

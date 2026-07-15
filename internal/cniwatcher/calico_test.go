@@ -39,7 +39,6 @@ func TestNewCalicoWatcher(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 
@@ -98,7 +97,6 @@ func TestCalicoWatcher_ConnectToGoldmane(t *testing.T) {
 	otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 		Ctx:               t.Context(),
 		Log:               log,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	})
 
@@ -198,7 +196,6 @@ func TestCalicoWatcher_WatchFlows(t *testing.T) {
 	otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 		Ctx:               t.Context(),
 		Log:               log,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	})
 
@@ -290,7 +287,6 @@ func TestCalicoWatcher_Shutdown(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 

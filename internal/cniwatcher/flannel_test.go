@@ -36,7 +36,6 @@ func TestNewFlannelWatcher(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 
@@ -77,7 +76,6 @@ func TestFlannelWatcher_Start(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 
@@ -201,7 +199,6 @@ func TestFlannelWatcher_Shutdown(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 

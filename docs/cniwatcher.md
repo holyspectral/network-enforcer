@@ -7,7 +7,7 @@ The cniWatcher DaemonSet watches CNI policy deny events (Calico Goldmane, Cilium
 ```bash
 make cniwatcher
 # or container image:
-make build-cniwatcher-image CNIWATCHER_VERSION=$(git describe --tags --dirty --always)
+make build-cniwatcher-image
 ```
 
 ## Helm

@@ -40,7 +40,6 @@ func TestNewCiliumWatcher(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 
@@ -78,7 +77,6 @@ func TestCiliumWatcher_ConnectToHubble(t *testing.T) {
 	otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 		Ctx:               t.Context(),
 		Log:               log,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	})
 
@@ -172,7 +170,6 @@ func TestCiliumWatcher_WatchFlows(t *testing.T) {
 	otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 		Ctx:               t.Context(),
 		Log:               log,
-		ServiceVersion:    "test-version",
 		CollectorEndpoint: "localhost:4317",
 	})
 
@@ -270,7 +267,6 @@ func TestCiliumWatcher_Shutdown(t *testing.T) {
 			otelService := otel.NewOpenTelemetryService(otel.OpenTelemetryConfig{
 				Ctx:               t.Context(),
 				Log:               log,
-				ServiceVersion:    "test-version",
 				CollectorEndpoint: "localhost:4317",
 			})
 
