@@ -1,0 +1,21 @@
+apiVersion: security.rancher.io/v1alpha1
+kind: WorkloadNetworkPolicyProposal
+metadata:
+  name: deployment-nginx-deployment-ingress
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+      podSelector:
+        matchLabels:
+          app: ubuntu
+    ports:
+    - port: 80
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: nginx
+  policyTypes:
+  - Ingress
