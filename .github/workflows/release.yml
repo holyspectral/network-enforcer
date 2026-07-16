@@ -77,7 +77,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Attestation
-        uses: rancher-sandbox/runtime-enforcer/.github/actions/attestation@3ef087afd4c8131a1eacdd84873b7ddcaa13beaf
+        uses: rancher-sandbox/runtime-enforcer/.github/actions/attestation@89394bdcf7d1e8728a3c57aefdfbc3fcabd1140c
         with:
           arch: ${{ matrix.arch }}
           image: ${{ matrix.component }}
