@@ -1,6 +1,6 @@
 module github.com/rancher-sandbox/network-enforcer
 
-go 1.26.0
+go 1.26.5
 
 require (
 	github.com/cilium/cilium v1.19.5
