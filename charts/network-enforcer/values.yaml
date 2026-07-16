@@ -38,10 +38,16 @@ controller:
 kubernetesClusterDomain: cluster.local
 imagePullSecrets: []
 
+# Settings for opentelemetry-ebpf-instrumentation
+# @schema additionalProperties:true
 obi:
   enabled: true
   preset: network
+  # opentelemetry-ebpf-instrumentation config
+  # @schema additionalProperties:true
   config:
+    # opentelemetry-ebpf-instrumentation config data block
+    # @schema additionalProperties:true
     data:
       otel_metrics_export:
         endpoint: http://network-enforcer-otlp:4317

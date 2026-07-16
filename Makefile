@@ -80,7 +80,7 @@ manifests: controller-gen ## Generate CRDs and RBAC.
 	echo '{{- end }}' >> charts/network-enforcer/templates/cniwatcher/role.yaml
 
 .PHONY: generate
-generate: manifests controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: manifests controller-gen generate-chart-values ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: proto-agent
@@ -174,11 +174,13 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 PROTOC_GEN_GO ?= $(LOCALBIN)/protoc-gen-go
 PROTOC_GEN_GO_GRPC ?= $(LOCALBIN)/protoc-gen-go-grpc
+HELM_VALUES_SCHEMA_JSON ?= $(LOCALBIN)/helm-values-schema-json
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
 PROTOC_GEN_GO_VERSION ?= v1.36.11
 PROTOC_GEN_GO_GRPC_VERSION ?= v1.6.1
+HELM_VALUES_SCHEMA_JSON_VERSION ?= v2.3.1
 
 #ENVTEST_VERSION is the version of controller-runtime release branch to fetch the envtest setup script (i.e. release-0.20)
 ENVTEST_VERSION ?= $(shell v='$(call gomodver,sigs.k8s.io/controller-runtime)'; \
@@ -218,6 +220,17 @@ $(PROTOC_GEN_GO): | $(LOCALBIN)
 protoc-gen-go-grpc: $(PROTOC_GEN_GO_GRPC)
 $(PROTOC_GEN_GO_GRPC): | $(LOCALBIN)
 	$(call go-install-tool,$(PROTOC_GEN_GO_GRPC),google.golang.org/grpc/cmd/protoc-gen-go-grpc,$(PROTOC_GEN_GO_GRPC_VERSION))
+
+.PHONY: helm-values-schema-json
+helm-values-schema-json: $(HELM_VALUES_SCHEMA_JSON) ## Download helm-values-schema-json locally if necessary.
+$(HELM_VALUES_SCHEMA_JSON): $(LOCALBIN)
+	$(call go-install-tool,$(HELM_VALUES_SCHEMA_JSON),github.com/losisin/helm-values-schema-json/v2,$(HELM_VALUES_SCHEMA_JSON_VERSION))
+
+.PHONY: generate-chart-values
+generate-chart-values: $(HELM_VALUES_SCHEMA_JSON)
+	$(HELM_VALUES_SCHEMA_JSON) --no-additional-properties \
+		--values charts/network-enforcer/values.yaml \
+		--output charts/network-enforcer/values.schema.json
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
@@ -264,10 +277,6 @@ generate-calico-goldmane-proto: download-calico-goldmane-proto ## Generate Go co
 	protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		internal/cniwatcher/calico/goldmane/api.proto
-
-.PHONY: build-cniwatcher-image
-build-cniwatcher-image:
-	$(CONTAINER_TOOL) build -t cniwatcher:latest -f package/Dockerfile.cniwatcher .
 
 .PHONY: test-e2e
 test-e2e: build-controller-image

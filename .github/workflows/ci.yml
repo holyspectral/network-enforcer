@@ -51,6 +51,28 @@ jobs:
         run: |
           go mod tidy
           make test
+  verify-generated-code:
+    name: Verify generated code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: "go.mod"
+      - name: Generate files
+        run: make generate
+      - name: Check working tree is clean
+        run: |
+          if ! git diff --quiet; then
+            echo "generated files are not up to date. Run: make generate"
+            echo ""
+            echo "Diff:"
+            git --no-pager diff
+            exit 1
+          fi
   commitlint:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
