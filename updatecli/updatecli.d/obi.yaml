@@ -23,6 +23,15 @@ targets:
     spec:
       file: charts/network-enforcer/Chart.yaml
       key: $.dependencies[0].version
+  helm-dependency-update:
+    name: 'deps(obi): run helm dependency update'
+    kind: shell
+    scmid: default
+    disablesourceinput: true
+    spec:
+      command: 'helm dependency update charts/network-enforcer'
+      environments:
+        - name: PATH
 
 actions:
   default:
