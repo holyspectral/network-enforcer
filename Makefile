@@ -117,11 +117,11 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 
 .PHONY: build
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/netenforcer/main.go
+	go build -o bin/manager ./cmd/netenforcer
 
 .PHONY: controller
 controller: fmt ## Build controller binary.
-	CGO_ENABLED=0 GOOS=linux go build -o bin/controller cmd/netenforcer/main.go
+	CGO_ENABLED=0 GOOS=linux go build -o bin/controller ./cmd/netenforcer
 
 .PHONY: cniwatcher
 cniwatcher: fmt vet ## Build cniwatcher binary.
