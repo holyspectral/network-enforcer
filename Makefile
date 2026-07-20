@@ -276,5 +276,8 @@ generate-calico-goldmane-proto: download-calico-goldmane-proto ## Generate Go co
 
 .PHONY: test-e2e
 test-e2e: build-controller-image
+	@echo "🧪 Building chart dependencies..."
+	helm repo add --force-update open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+	helm dependency build charts/network-enforcer
 	@echo "🧪 Running e2e tests..."
 	go test -v ./test/e2e/... -count=1
