@@ -10,29 +10,21 @@ sources:
       url: https://open-telemetry.github.io/opentelemetry-helm-charts
       name: opentelemetry-ebpf-instrumentation
       versionfilter:
-        # Only stable semver releases, take the highest one
         kind: semver
         pattern: "*"
 
 targets:
-  chart-dependency:
-    name: 'deps(obi): update opentelemetry-ebpf-instrumentation chart to {{ source "obi" }}'
-    sourceid: obi
-    kind: yaml
-    scmid: default
-    spec:
-      file: charts/network-enforcer/Chart.yaml
-      key: $.dependencies[0].version
-  helm-dependency-update:
-    name: 'deps(obi): run helm dependency update'
+  obi-dependency-update:
+    name: 'deps(obi): update opentelemetry-ebpf-instrumentation to {{ source "obi" }}'
     kind: shell
     scmid: default
     disablesourceinput: true
-    dependson:
-      - chart-dependency
-    dependsonchange: true
     spec:
-      command: 'helm dependency update charts/network-enforcer'
+      command: >
+        version='{{ source "obi" }}' &&
+        chart_dir='charts/network-enforcer' &&
+        sed -i 's/^    version: .*/    version: "'"$version"'"/' "${chart_dir}/Chart.yaml" &&
+        helm dependency update "${chart_dir}"
       environments:
         - name: PATH
         - name: HOME
