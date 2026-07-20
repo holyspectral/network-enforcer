@@ -24,7 +24,8 @@ targets:
         version='{{ source "obi" }}' &&
         chart_dir='charts/network-enforcer' &&
         sed -i 's/^    version: .*/    version: "'"$version"'"/' "${chart_dir}/Chart.yaml" &&
-        helm dependency update "${chart_dir}"
+        helm dependency update "${chart_dir}" &&
+        git add -A
       environments:
         - name: PATH
         - name: HOME
