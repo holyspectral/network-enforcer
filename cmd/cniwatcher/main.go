@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -18,8 +19,39 @@ import (
 
 const otelShutdownTimeout = 10 * time.Second
 
+func grpcConfigFromFlags() cniwatcher.GRPCServerConfig {
+	// Read environment variables as defaults (before flag.Parse) so explicit CLI
+	// flags take precedence. This avoids the uncommon precedence of env vars
+	// overriding flags that the user explicitly passed.
+	defaultPort := cniwatcher.DefaultGRPCPort
+	if portStr := os.Getenv("CNIWATCHER_GRPC_PORT"); portStr != "" {
+		if p, parseErr := strconv.Atoi(portStr); parseErr == nil && p > 0 {
+			defaultPort = p
+		}
+	}
+	defaultCertDir := os.Getenv("CNIWATCHER_TLS_CERT_DIR")
+
+	port := flag.Int("cniwatcher-grpc-port", defaultPort,
+		"Port for the gRPC ScrapeViolations server.")
+	tlsCertDir := flag.String("cniwatcher-tls-cert-dir", defaultCertDir,
+		"Directory containing tls.crt, tls.key, and ca.crt for mTLS. "+
+			"When empty, the gRPC server runs in insecure mode (no TLS).")
+	flag.Parse()
+
+	cfg := cniwatcher.GRPCServerConfig{
+		Port: *port,
+	}
+	if *tlsCertDir != "" {
+		cfg.MTLSEnabled = true
+		cfg.CertDir = *tlsCertDir
+	}
+	return cfg
+}
+
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	grpcConfig := grpcConfigFromFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -61,21 +93,6 @@ func main() {
 	if err != nil {
 		logger.Error("Failed to create cniWatcher", "err", err)
 		os.Exit(1)
-	}
-
-	// Parse gRPC port from env or use default.
-	grpcPort := cniwatcher.DefaultGRPCPort
-	if portStr := os.Getenv("CNIWATCHER_GRPC_PORT"); portStr != "" {
-		if p, parseErr := strconv.Atoi(portStr); parseErr == nil && p > 0 {
-			grpcPort = p
-		}
-	}
-
-	// TODO: Add mTLS support for the gRPC server in a follow-up.
-	// Port tlsutil cert loading behind a --cniwatcher-tls-cert-dir flag so an
-	// insecure default keeps the dev/kind path simple.
-	grpcConfig := cniwatcher.GRPCServerConfig{
-		Port: grpcPort,
 	}
 
 	shutdownCh := make(chan struct{})

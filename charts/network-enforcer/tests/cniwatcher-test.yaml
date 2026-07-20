@@ -24,4 +24,50 @@ tests:
           value: "somewhere/cniwatcher:v9.9.9"
       - equal:
           path: "spec.template.spec.containers[0].imagePullPolicy"
-          value: "Always" 
+          value: "Always"
+
+  - it: "should not include mTLS args when mtls is disabled"
+    asserts:
+      - notExists:
+          path: "spec.template.spec.containers[0].args[?(@ == '--cniwatcher-tls-cert-dir=/etc/network-enforcer/certs')]"
+      - notExists:
+          path: "spec.template.spec.containers[0].volumeMounts[?(@.name == 'cniwatcher-mtls-certs')]"
+      - notExists:
+          path: "spec.template.spec.volumes[?(@.name == 'cniwatcher-mtls-certs')]"
+
+  - it: "should include mTLS args, volume mounts and volumes when mtls is enabled"
+    set:
+      cniwatcher:
+        mtls:
+          enabled: true
+          certDir: /etc/network-enforcer/certs
+    asserts:
+      - exists:
+          path: "spec.template.spec.containers[0].args"
+      - contains:
+          path: "spec.template.spec.containers[0].args"
+          content: "--cniwatcher-tls-cert-dir=/etc/network-enforcer/certs"
+      - exists:
+          path: "spec.template.spec.containers[0].volumeMounts[?(@.name == 'cniwatcher-mtls-certs')]"
+      - equal:
+          path: "spec.template.spec.containers[0].volumeMounts[?(@.name == 'cniwatcher-mtls-certs')].mountPath"
+          value: "/etc/network-enforcer/certs"
+      - equal:
+          path: "spec.template.spec.containers[0].volumeMounts[?(@.name == 'cniwatcher-mtls-certs')].readOnly"
+          value: true
+      - exists:
+          path: "spec.template.spec.volumes[?(@.name == 'cniwatcher-mtls-certs')]"
+
+  - it: "should use custom certDir when specified"
+    set:
+      cniwatcher:
+        mtls:
+          enabled: true
+          certDir: /custom/path/certs
+    asserts:
+      - contains:
+          path: "spec.template.spec.containers[0].args"
+          content: "--cniwatcher-tls-cert-dir=/custom/path/certs"
+      - equal:
+          path: "spec.template.spec.containers[0].volumeMounts[?(@.name == 'cniwatcher-mtls-certs')].mountPath"
+          value: "/custom/path/certs"

@@ -71,6 +71,18 @@
                     },
                     "additionalProperties": false
                 },
+                "mtls": {
+                    "type": "object",
+                    "properties": {
+                        "certDir": {
+                            "type": "string"
+                        },
+                        "enabled": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "otelEndpoint": {
                     "type": "string"
                 },

@@ -33,6 +33,10 @@ spec:
       - args:
         {{- toYaml .Values.controller.args | nindent 8 }}
         - --drain-flows-interval={{ .Values.controller.drainFlowsInterval }}
+        {{- if .Values.cniwatcher.mtls.enabled }}
+        - --cniwatcher-mtls=true
+        - --cniwatcher-tls-cert-dir={{ .Values.cniwatcher.mtls.certDir }}
+        {{- end }}
         command:
         - /controller
         env:
@@ -64,6 +68,27 @@ spec:
         resources: {{- toYaml .Values.controller.resources | nindent 10 }}
         securityContext: {{- toYaml .Values.controller.containerSecurityContext
           | nindent 10 }}
+        {{- if .Values.cniwatcher.mtls.enabled }}
+        volumeMounts:
+        - name: cniwatcher-mtls-certs
+          mountPath: {{ .Values.cniwatcher.mtls.certDir }}
+          readOnly: true
+        {{- end }}
+      {{- if .Values.cniwatcher.mtls.enabled }}
+      volumes:
+      - name: cniwatcher-mtls-certs
+        projected:
+          sources:
+            - secret:
+                name: cniwatcher-mtls-certs
+                items:
+                  - key: tls.crt
+                    path: tls.crt
+                  - key: tls.key
+                    path: tls.key
+                  - key: ca.crt
+                    path: ca.crt
+      {{- end }}
       securityContext: {{- toYaml .Values.controller.podSecurityContext | nindent
         8 }}
       {{- with .Values.controller.tolerations }}

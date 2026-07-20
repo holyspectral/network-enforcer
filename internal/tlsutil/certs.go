@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -57,4 +59,67 @@ func ValidateCertDir(dirPath string) error {
 		filepath.Join(dirPath, KeyFile),
 	)
 	return err
+}
+
+// ServerCredentials creates gRPC transport credentials for server-side mTLS.
+// It loads the server certificate and key, and configures client certificate
+// verification against the CA pool from the given certDir.
+func ServerCredentials(certDir string) (credentials.TransportCredentials, error) {
+	if err := ValidateCertDir(certDir); err != nil {
+		return nil, fmt.Errorf("invalid cert dir: %w", err)
+	}
+
+	certPath := filepath.Join(certDir, CertFile)
+	keyPath := filepath.Join(certDir, KeyFile)
+	caPath := filepath.Join(certDir, CAFile)
+
+	serverCert, err := LoadKeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load server key pair: %w", err)
+	}
+
+	caPool, err := LoadCACertPool(caPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CA certificate pool: %w", err)
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    caPool,
+		MinVersion:   tls.VersionTLS13,
+	}
+	return credentials.NewTLS(tlsConfig), nil
+}
+
+// ClientCredentials creates gRPC transport credentials for client-side mTLS.
+// It loads the client certificate and key, and configures server certificate
+// verification against the CA pool. The serverName is used for TLS SNI and
+// certificate hostname verification.
+func ClientCredentials(certDir, serverName string) (credentials.TransportCredentials, error) {
+	if err := ValidateCertDir(certDir); err != nil {
+		return nil, fmt.Errorf("invalid cert dir: %w", err)
+	}
+
+	certPath := filepath.Join(certDir, CertFile)
+	keyPath := filepath.Join(certDir, KeyFile)
+	caPath := filepath.Join(certDir, CAFile)
+
+	pool, err := LoadCACertPool(caPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CA certificate pool: %w", err)
+	}
+
+	clientCert, err := LoadKeyPair(certPath, keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client key pair: %w", err)
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{clientCert},
+		RootCAs:      pool,
+		MinVersion:   tls.VersionTLS13,
+		ServerName:   serverName,
+	}
+	return credentials.NewTLS(tlsConfig), nil
 }

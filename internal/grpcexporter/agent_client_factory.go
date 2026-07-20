@@ -1,10 +1,8 @@
 package grpcexporter
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net"
-	"path/filepath"
 	"strconv"
 
 	"github.com/rancher-sandbox/network-enforcer/internal/tlsutil"
@@ -18,9 +16,7 @@ import (
 type AgentClientFactory struct {
 	port        string
 	mTLSEnabled bool
-	tlsCertPath string
-	tlsKeyPath  string
-	caCertPath  string
+	certDir     string
 }
 
 // AgentFactoryConfig holds the configuration for the AgentClientFactory.
@@ -39,20 +35,16 @@ func NewAgentClientFactory(conf *AgentFactoryConfig) (*AgentClientFactory, error
 		return nil, fmt.Errorf("invalid gRPC port: %d", conf.Port)
 	}
 
-	var tlsCertPath, tlsKeyPath, caCertPath string
+	var certDir string
 	if conf.MTLSEnabled {
 		if err := tlsutil.ValidateCertDir(conf.CertDirPath); err != nil {
 			return nil, fmt.Errorf("invalid certificate directory %q: %w", conf.CertDirPath, err)
 		}
-		tlsCertPath = filepath.Join(conf.CertDirPath, tlsutil.CertFile)
-		tlsKeyPath = filepath.Join(conf.CertDirPath, tlsutil.KeyFile)
-		caCertPath = filepath.Join(conf.CertDirPath, tlsutil.CAFile)
+		certDir = conf.CertDirPath
 	}
 	return &AgentClientFactory{
 		port:        strconv.Itoa(conf.Port),
-		tlsCertPath: tlsCertPath,
-		tlsKeyPath:  tlsKeyPath,
-		caCertPath:  caCertPath,
+		certDir:     certDir,
 		mTLSEnabled: conf.MTLSEnabled,
 	}, nil
 }
@@ -64,25 +56,7 @@ func (f *AgentClientFactory) getConnCredentials(serverName string) (credentials.
 	if !f.mTLSEnabled {
 		return insecure.NewCredentials(), nil
 	}
-
-	// Load credentials on each connection to support certificate rotation.
-	certPool, err := tlsutil.LoadCACertPool(f.caCertPath)
-	if err != nil {
-		return nil, err
-	}
-
-	clientCert, err := tlsutil.LoadKeyPair(f.tlsCertPath, f.tlsKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{clientCert},
-		RootCAs:      certPool,
-		MinVersion:   tls.VersionTLS13,
-		ServerName:   serverName,
-	}
-	return credentials.NewTLS(tlsConfig), nil
+	return tlsutil.ClientCredentials(f.certDir, serverName)
 }
 
 // NewClient creates a new AgentClient connected to the given pod IP using the

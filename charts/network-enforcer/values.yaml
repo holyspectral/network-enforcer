@@ -75,6 +75,17 @@ cniwatcher:
   # Port for the gRPC ScrapeViolations server. The controller scrapes violations
   # from each cniwatcher pod on this port.
   grpcPort: 50051
+  # mTLS configuration for the gRPC ScrapeViolations server. When enabled, the
+  # controller and cniwatcher authenticate each other via mutual TLS. The cert
+  # directory is typically provided by a Secret or projected volume containing
+  # tls.crt, tls.key, and ca.crt.
+  # When disabled (default), the gRPC server runs in insecure mode, suitable
+  # for dev/kind testing where the node network is trusted.
+  mtls:
+    enabled: false
+    # Directory where TLS certificates are mounted. Defaults to
+    # /etc/network-enforcer/certs when mtls.enabled is true.
+    certDir: /etc/network-enforcer/certs
   podSecurityContext:
     runAsNonRoot: true # this should be false for aws-vpc
     seccompProfile:

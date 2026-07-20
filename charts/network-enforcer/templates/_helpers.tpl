@@ -81,6 +81,11 @@ CNI-specific volume mounts for cniwatcher
   mountPath: /var/log/aws-routed-eni
   readOnly: true
 {{- end }}
+{{- if .Values.cniwatcher.mtls.enabled }}
+- name: cniwatcher-mtls-certs
+  mountPath: {{ .Values.cniwatcher.mtls.certDir }}
+  readOnly: true
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -105,5 +110,19 @@ CNI-specific volumes for cniwatcher
   hostPath:
     path: /var/log/aws-routed-eni
     type: Directory
+{{- end }}
+{{- if .Values.cniwatcher.mtls.enabled }}
+- name: cniwatcher-mtls-certs
+  projected:
+    sources:
+      - secret:
+          name: cniwatcher-mtls-certs
+          items:
+            - key: tls.crt
+              path: tls.crt
+            - key: tls.key
+              path: tls.key
+            - key: ca.crt
+              path: ca.crt
 {{- end }}
 {{- end -}}
