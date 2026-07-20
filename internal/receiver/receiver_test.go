@@ -48,6 +48,20 @@ func TestReceiverGenerateFlow(t *testing.T) {
 		return newAttrs
 	}
 
+	udpAttrs := map[string]string{
+		"transport":          "UDP",
+		"src.port":           "43740",
+		"dst.port":           "53",
+		"k8s.src.owner.type": string(ownerkind.KindDeployment),
+		"k8s.src.owner.name": "ubuntu-deployment",
+		"k8s.src.namespace":  "default",
+		"k8s.dst.owner.type": string(ownerkind.KindDeployment),
+		"k8s.dst.owner.name": "coredns",
+		"k8s.dst.namespace":  "kube-system",
+		"src.address":        "192.168.92.22",
+		"dst.address":        "192.168.21.204",
+	}
+
 	tests := []struct {
 		name  string
 		attrs map[string]string
@@ -102,6 +116,33 @@ func TestReceiverGenerateFlow(t *testing.T) {
 				Protocol:   corev1.ProtocolTCP,
 				DstPort:    80,
 			},
+		},
+		{
+			// src.port=43740 (> 1024), dst.port=53 (< 1024): request direction, must be recorded.
+			name:  "UDPRequestIsRecorded",
+			attrs: udpAttrs,
+			flow: &topology.FlowRecord{
+				Source: topology.WorkloadKey{
+					Namespace: "default",
+					OwnerKind: ownerkind.KindDeployment,
+					OwnerName: "ubuntu-deployment",
+				},
+				Dest: topology.WorkloadKey{
+					Namespace: "kube-system",
+					OwnerKind: ownerkind.KindDeployment,
+					OwnerName: "coredns",
+				},
+				DstPort:    53,
+				Protocol:   corev1.ProtocolUDP,
+				SrcAddress: "192.168.92.22",
+				DstAddress: "192.168.21.204",
+			},
+		},
+		{
+			// src.port=53 (< 1024), dst.port=47452 (> 1024): response direction, must be dropped.
+			name:  "UDPResponseIsDropped",
+			attrs: mutateAttrs(mutateAttrs(udpAttrs, "src.port", "53"), "dst.port", "47452"),
+			flow:  nil,
 		},
 	}
 
