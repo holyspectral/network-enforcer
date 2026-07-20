@@ -34,3 +34,6 @@ tilt-settings.yaml
 
 # Helm repository cache (created when HOME is not set during helm dependency update)
 .cache
+
+# Helm built chart dependencies (regenerated from Chart.lock via `helm dependency build`)
+charts/network-enforcer/charts/
