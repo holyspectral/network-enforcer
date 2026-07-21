@@ -82,6 +82,13 @@ Certificate helpers for cniwatcher mTLS (CA issuer and secret share a name).
 {{- end -}}
 
 {{/*
+Certificate directory for OBI mTLS (shares the same CA as cniwatcher).
+*/}}
+{{- define "network-enforcer.obi.certDir" -}}
+/etc/network-enforcer/certs
+{{- end -}}
+
+{{/*
 CNI-specific volume mounts for cniwatcher
 */}}
 {{- define "network-enforcer.cniwatcher.volumeMounts" -}}

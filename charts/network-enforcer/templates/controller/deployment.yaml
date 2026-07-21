@@ -77,7 +77,7 @@ spec:
           volumeAttributes:
             csi.cert-manager.io/issuer-name: {{ include "network-enforcer.caIssuerName" . }}
             csi.cert-manager.io/issuer-kind: Issuer
-            csi.cert-manager.io/dns-names: {{ include "network-enforcer.fullname" . }}-controller-manager.{{ .Release.Namespace }}.svc,{{ include "network-enforcer.controller.otlpServiceDNS" . }}
+            csi.cert-manager.io/dns-names: {{ include "network-enforcer.fullname" . }}-controller-manager.{{ .Release.Namespace }}.svc,{{ include "network-enforcer.fullname" . }}-otlp,{{ include "network-enforcer.controller.otlpServiceDNS" . }}
       securityContext: {{- toYaml .Values.controller.podSecurityContext | nindent
         8 }}
       {{- with .Values.controller.tolerations }}
