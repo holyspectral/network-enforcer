@@ -120,12 +120,8 @@ controller: fmt ## Build controller binary.
 	CGO_ENABLED=0 GOOS=linux go build -o bin/controller ./cmd/controller
 
 .PHONY: cniwatcher
-cniwatcher: fmt vet ## Build cniwatcher binary.
+cniwatcher: fmt ## Build cniwatcher binary.
 	CGO_ENABLED=0 GOOS=linux go build -o bin/cniwatcher ./cmd/cniwatcher
-
-.PHONY: run
-run: generate fmt vet ## Run a controller from your host.
-	go run ./cmd/controller/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
