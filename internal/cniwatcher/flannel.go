@@ -24,9 +24,8 @@ type FlannelWatcher struct {
 	tailer fswatcher.FileTailer
 }
 
-// DropByPolicyRegex matches Flannel DROP by policy logs and extracts fields,
-// with optional SPT/DPT for TCP/UDP.
-var DropByPolicyRegex = regexp.MustCompile(
+// Regex to match DROP by policy lines and extract fields, with optional SPT/DPT for TCP/UDP.
+var dropByPolicyRegex = regexp.MustCompile(
 	`(?P<timestamp>^\w+\s+\d+\s+\d+:\d+:\d+)` +
 		`\s+[^ ]+\s+DROP by policy (?P<policy>[\w-]+\/[\w-]+)` +
 		` IN=[^ ]* OUT=[^ ]* MAC=[^ ]* SRC=(?P<srcip>[^ ]+) DST=(?P<dstip>[^ ]+)` +
@@ -65,7 +64,7 @@ func (w *FlannelWatcher) Start() error {
 }
 
 // parsePolicyDenyEvent parses Flannel logs which are stored at /var/log/ulog/syslogemu.log
-// It processes log lines with matching DropByPolicyRegex.
+// It processes log lines with matching dropByPolicyRegex.
 //
 // The function may return (nil) when the log line is not a policy deny event (e.g., "ALLOW").
 // This is not an error condition but indicates the line should be skipped.
@@ -74,13 +73,13 @@ func (w *FlannelWatcher) Start() error {
 //   - (*types.PolicyDenyEvent): Successfully parsed policy deny event
 //   - (nil): Not a policy deny event (should be skipped)
 func (w *FlannelWatcher) parsePolicyDenyEvent(line string) *types.PolicyDenyEvent {
-	matches := DropByPolicyRegex.FindStringSubmatch(line)
+	matches := dropByPolicyRegex.FindStringSubmatch(line)
 	if matches == nil {
 		// This is not a policy deny event, just skip it
 		return nil
 	}
 
-	groupNames := DropByPolicyRegex.SubexpNames()
+	groupNames := dropByPolicyRegex.SubexpNames()
 	fields := map[string]string{}
 	for i, name := range groupNames {
 		if i != 0 && name != "" {

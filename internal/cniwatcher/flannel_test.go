@@ -3,6 +3,7 @@ package cniwatcher_test
 import (
 	"log/slog"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/rancher-sandbox/network-enforcer/internal/cniwatcher"
@@ -25,6 +26,14 @@ func TestNewFlannelWatcher(t *testing.T) {
 }
 
 func TestDropByPolicyRegexFieldExtraction(t *testing.T) {
+	dropByPolicyRegex := regexp.MustCompile(
+		`(?P<timestamp>^\w+\s+\d+\s+\d+:\d+:\d+)` +
+			`\s+[^ ]+\s+DROP by policy (?P<policy>[\w-]+\/[\w-]+)` +
+			` IN=[^ ]* OUT=[^ ]* MAC=[^ ]* SRC=(?P<srcip>[^ ]+) DST=(?P<dstip>[^ ]+)` +
+			`.*?PROTO=(?P<proto>[^ ]+)` +
+			`(?: SPT=(?P<srcport>\d+) DPT=(?P<dstport>\d+))?`,
+	)
+
 	tests := []struct {
 		name           string
 		logLine        string
@@ -83,14 +92,14 @@ func TestDropByPolicyRegexFieldExtraction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matches := cniwatcher.DropByPolicyRegex.FindStringSubmatch(tt.logLine)
+			matches := dropByPolicyRegex.FindStringSubmatch(tt.logLine)
 			if !tt.shouldMatch {
 				assert.Nil(t, matches, "Expected no match for log line: %s", tt.logLine)
 				return
 			}
 
 			require.NotNil(t, matches, "Expected match for log line: %s", tt.logLine)
-			groupNames := cniwatcher.DropByPolicyRegex.SubexpNames()
+			groupNames := dropByPolicyRegex.SubexpNames()
 			fields := map[string]string{}
 			for i, name := range groupNames {
 				if i != 0 && name != "" {

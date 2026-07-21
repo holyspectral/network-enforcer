@@ -173,21 +173,21 @@ func (w *Watcher) ResolvePodOrServiceByIP(ip string) (PodOrServiceInfo, error) {
 		return PodOrServiceInfo{}, fmt.Errorf("invalid IP address format: %s", ip)
 	}
 
-	if info, found, err := w.resolveServiceByClusterIP(ip); err != nil {
+	if info, err := w.resolveServiceByClusterIP(ip); err != nil {
 		w.Log.Warn("failed to list services for cluster IP lookup", "ip", ip, "err", err)
-	} else if found {
+	} else {
 		return info, nil
 	}
 
-	if info, found, err := w.resolveServiceByExternalIP(ip); err != nil {
+	if info, err := w.resolveServiceByExternalIP(ip); err != nil {
 		w.Log.Warn("failed to list services for external IP lookup", "ip", ip, "err", err)
-	} else if found {
+	} else {
 		return info, nil
 	}
 
-	if info, found, err := w.resolvePodByIP(ip); err != nil {
+	if info, err := w.resolvePodByIP(ip); err != nil {
 		w.Log.Warn("failed to list pods", "ip", ip, "err", err)
-	} else if found {
+	} else {
 		return info, nil
 	}
 
@@ -195,13 +195,13 @@ func (w *Watcher) ResolvePodOrServiceByIP(ip string) (PodOrServiceInfo, error) {
 }
 
 // resolveServiceByClusterIP attempts to find a Service with the given ClusterIP.
-func (w *Watcher) resolveServiceByClusterIP(ip string) (PodOrServiceInfo, bool, error) {
+func (w *Watcher) resolveServiceByClusterIP(ip string) (PodOrServiceInfo, error) {
 	services := &corev1.ServiceList{}
 	if err := w.Client.List(w.Ctx, services, client.MatchingFields{"spec.clusterIP": ip}); err != nil {
-		return PodOrServiceInfo{}, false, err
+		return PodOrServiceInfo{}, err
 	}
 	if len(services.Items) == 0 {
-		return PodOrServiceInfo{}, false, nil
+		return PodOrServiceInfo{}, errors.New("not found")
 	}
 	svc := services.Items[0]
 	return PodOrServiceInfo{
@@ -209,14 +209,14 @@ func (w *Watcher) resolveServiceByClusterIP(ip string) (PodOrServiceInfo, bool, 
 		Namespace: svc.Namespace,
 		Type:      types.PodOrServiceTypeService,
 		Labels:    extractLabels(svc.Labels),
-	}, true, nil
+	}, nil
 }
 
 // resolveServiceByExternalIP attempts to find a Service with the provided external IP in spec.externalIPs.
-func (w *Watcher) resolveServiceByExternalIP(ip string) (PodOrServiceInfo, bool, error) {
+func (w *Watcher) resolveServiceByExternalIP(ip string) (PodOrServiceInfo, error) {
 	services := &corev1.ServiceList{}
 	if err := w.Client.List(w.Ctx, services); err != nil {
-		return PodOrServiceInfo{}, false, err
+		return PodOrServiceInfo{}, err
 	}
 	for _, svc := range services.Items {
 		if containsIP(svc.Spec.ExternalIPs, ip) {
@@ -225,20 +225,20 @@ func (w *Watcher) resolveServiceByExternalIP(ip string) (PodOrServiceInfo, bool,
 				Namespace: svc.Namespace,
 				Type:      types.PodOrServiceTypeExternalService,
 				Labels:    extractLabels(svc.Labels),
-			}, true, nil
+			}, nil
 		}
 	}
-	return PodOrServiceInfo{}, false, nil
+	return PodOrServiceInfo{}, errors.New("not found")
 }
 
 // resolvePodByIP attempts to find a Pod with the given PodIP.
-func (w *Watcher) resolvePodByIP(ip string) (PodOrServiceInfo, bool, error) {
+func (w *Watcher) resolvePodByIP(ip string) (PodOrServiceInfo, error) {
 	pods := &corev1.PodList{}
 	if err := w.Client.List(w.Ctx, pods, client.MatchingFields{"status.podIP": ip}); err != nil {
-		return PodOrServiceInfo{}, false, err
+		return PodOrServiceInfo{}, err
 	}
 	if len(pods.Items) == 0 {
-		return PodOrServiceInfo{}, false, nil
+		return PodOrServiceInfo{}, errors.New("not found")
 	}
 	pod := pods.Items[0]
 	return PodOrServiceInfo{
@@ -246,7 +246,7 @@ func (w *Watcher) resolvePodByIP(ip string) (PodOrServiceInfo, bool, error) {
 		Namespace: pod.Namespace,
 		Type:      types.PodOrServiceTypePod,
 		Labels:    extractLabels(pod.Labels),
-	}, true, nil
+	}, nil
 }
 
 func (w *Watcher) CreateFileTailer(logPath string) (fswatcher.FileTailer, error) {
