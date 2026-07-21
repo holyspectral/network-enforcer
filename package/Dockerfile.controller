@@ -1,16 +1,17 @@
 FROM registry.suse.com/bci/golang:1.26.5 AS builder
-ARG TARGETOS
-ARG TARGETARCH
 
-WORKDIR /workspace
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o controller ./cmd/controller
+WORKDIR /src
+COPY api/ /src/api
+COPY cmd/ /src/cmd
+COPY proto/ /src/proto
+COPY internal/ /src/internal
+COPY go.mod go.sum /src/
+COPY Makefile /src/
+RUN make controller
 
-FROM gcr.io/distroless/static:nonroot
+FROM scratch
 WORKDIR /
-COPY --from=builder /workspace/controller .
-USER 65532:65532
+COPY --from=builder /src/bin/controller /controller
 
+USER 65532:65532
 ENTRYPOINT ["/controller"]
