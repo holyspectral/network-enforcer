@@ -256,8 +256,9 @@ func assessPoliciesAreNotUpdatedInMonitorMode(ctx context.Context, t *testing.T,
 	for _, storedPolicy := range storedPolicies {
 		require.Never(t, func() bool {
 			var policy securityv1alpha1.WorkloadNetworkPolicy
-			err := client.Get(ctx, storedPolicy.Name, storedPolicy.Namespace, &policy)
-			require.NoError(t, err, "failed to get network policy %q", storedPolicy.NamespacedName().String())
+			if err := client.Get(ctx, storedPolicy.Name, storedPolicy.Namespace, &policy); err != nil {
+				return false
+			}
 
 			if len(policy.Status.Violations) > 0 {
 				// todo!: this will change in the future when we will implement violation for monitor mode
@@ -285,6 +286,7 @@ func assessK8sNetworkPoliciesAreCreated(ctx context.Context, t *testing.T, _ *en
 		require.Eventually(t, func() bool {
 			if err := client.Get(ctx, policy.Name, policy.Namespace, &policy); err != nil {
 				t.Logf("failed to get network policy %q: %v", policy.NamespacedName().String(), err)
+				return false
 			}
 			policy.Spec.Mode = securityv1alpha1.WorkloadNetworkPolicyModeProtect
 			if err := client.Update(ctx, &policy); err != nil {
@@ -331,8 +333,9 @@ func checkViolations(ctx context.Context, t *testing.T, _ *envconf.Config) conte
 	for _, policy := range storedPolicies {
 		require.Eventually(t, func() bool {
 			var updatedPolicy securityv1alpha1.WorkloadNetworkPolicy
-			err := client.Get(ctx, policy.Name, policy.Namespace, &updatedPolicy)
-			require.NoError(t, err, "failed to get network policy %q", policy.NamespacedName().String())
+			if err := client.Get(ctx, policy.Name, policy.Namespace, &updatedPolicy); err != nil {
+				return false
+			}
 
 			// Check if there are any violations
 			return len(updatedPolicy.Status.Violations) > 0
