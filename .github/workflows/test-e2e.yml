@@ -10,14 +10,16 @@ jobs:
     permissions:
       contents: read
     strategy:
+      fail-fast: false
       matrix:
         arch: [amd64, arm64]
+        cni: [cilium]
         include:
           - arch: amd64
             runner: ubuntu-latest
           - arch: arm64
             runner: ubuntu-24.04-arm
-    name: E2E test
+    name: E2E test (${{ matrix.arch }}, ${{ matrix.cni }})
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -28,12 +30,12 @@ jobs:
           go-version-file: "go.mod"
       - name: Running Test e2e
         run: |
-          make test-e2e
+          make test-e2e E2E_CNI=${{ matrix.cni }}
       - name: Upload cluster logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-test-cluster-logs
+          name: e2e-test-cluster-logs-${{ matrix.arch }}-${{ matrix.cni }}
           path: test/e2e/logs
           if-no-files-found: error
           retention-days: 7
