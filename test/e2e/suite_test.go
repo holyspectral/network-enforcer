@@ -11,6 +11,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
@@ -28,7 +29,8 @@ var (
 func TestMain(m *testing.M) {
 	testSuiteConf := loadSuiteConfig()
 
-	cfg, _ := envconf.NewFromFlags()
+	path := conf.ResolveKubeConfigFile()
+	cfg := envconf.NewWithKubeConfig(path)
 	testEnv = env.NewWithConfig(cfg)
 
 	clusterName := envconf.RandomName(testSuiteConf.namespacePrefix, 20)
