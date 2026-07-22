@@ -42,6 +42,8 @@ func TestMain(m *testing.M) {
 		installCNI(testSuiteConf.cni),
 		installCertManager(),
 		installNetEnforcerChart(&testSuiteConf),
+		// we inject the suite config in the context so that each test can access parameters like the release name, namespace, image, etc.
+		injectSuiteConfig(testSuiteConf),
 	}
 
 	testEnv.Setup(setupFuncs...)

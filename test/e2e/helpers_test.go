@@ -12,10 +12,26 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
+	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
 
 type key string
+
+const (
+	suiteCfgKey = key("suiteConfig")
+)
+
+func injectSuiteConfig(sc suiteConfig) env.Func {
+	return func(ctx context.Context, _ *envconf.Config) (context.Context, error) {
+		return context.WithValue(ctx, suiteCfgKey, sc), nil
+	}
+}
+
+//nolint:unused // will be used in the future to access the suite config from the context
+func getSuiteConfig(ctx context.Context) suiteConfig {
+	return ctx.Value(suiteCfgKey).(suiteConfig)
+}
 
 func setupSharedK8sClient(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
 	t.Log("setup shared k8s client")
