@@ -316,6 +316,19 @@ func assessK8sNetworkPoliciesAreCreated(ctx context.Context, t *testing.T, _ *en
 			"Network policy %q spec is not equal to the expected spec",
 			policy.NamespacedName().String(),
 		)
+
+		require.Equal(
+			t,
+			[]metav1.OwnerReference{{
+				APIVersion: policy.GroupVersionKind().GroupVersion().String(),
+				Kind:       policy.Kind,
+				Name:       policy.Name,
+				UID:        policy.UID,
+			}},
+			k8sPolicy.OwnerReferences,
+			"K8s Network policy associated with %q doesn't contain the expected owner references",
+			policy.NamespacedName().String(),
+		)
 	}
 	return ctx
 }
