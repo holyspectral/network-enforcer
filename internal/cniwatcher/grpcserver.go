@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/tlsutil"
 	"github.com/rancher-sandbox/network-enforcer/internal/violationbuf"
 	agentv1 "github.com/rancher-sandbox/network-enforcer/proto/agent/v1"
 	"google.golang.org/grpc"
@@ -22,6 +23,11 @@ const (
 type GRPCServerConfig struct {
 	// Port to listen on. Defaults to DefaultGRPCPort when 0.
 	Port int
+
+	// CertDir is the directory containing tls.crt, tls.key, and ca.crt. When
+	// set, the server runs with mutual TLS; when empty it runs in plaintext
+	// (insecure) mode, suitable for dev/kind testing.
+	CertDir string
 }
 
 type GRPCServer struct {
@@ -96,6 +102,20 @@ func StartGRPCServer(
 		return errors.New("violation buffer must not be nil")
 	}
 
+	// Load mTLS credentials before binding the listener so we fail fast on
+	// invalid certs rather than after a potentially successful bind.
+	var grpcOpts []grpc.ServerOption
+	if config.CertDir != "" {
+		tlsCreds, credsErr := tlsutil.ServerCredentials(config.CertDir)
+		if credsErr != nil {
+			return fmt.Errorf("failed to create mTLS credentials: %w", credsErr)
+		}
+		grpcOpts = append(grpcOpts, grpc.Creds(tlsCreds))
+		logger.InfoContext(ctx, "mTLS enabled for gRPC server", "cert_dir", config.CertDir)
+	} else {
+		logger.InfoContext(ctx, "gRPC server running in insecure mode (no mTLS)")
+	}
+
 	port := config.Port
 	if port == 0 {
 		port = DefaultGRPCPort
@@ -109,7 +129,7 @@ func StartGRPCServer(
 		return fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
 
-	grpcSrv := grpc.NewServer()
+	grpcSrv := grpc.NewServer(grpcOpts...)
 	agentv1.RegisterNetworkAgentServer(grpcSrv, NewGRPCServer(logger, buffer))
 
 	logger.InfoContext(ctx, "Starting gRPC ScrapeViolations server", "addr", addr)

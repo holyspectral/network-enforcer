@@ -113,6 +113,20 @@ func TestGRPCServer_ScrapeViolations_Shutdown(t *testing.T) {
 	}
 }
 
+func TestGRPCServer_Start_InvalidCertDir(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	buf := violationbuf.NewBuffer()
+
+	config := cniwatcher.GRPCServerConfig{
+		Port:    0,
+		CertDir: t.TempDir(), // non-empty dir but missing tls.crt/tls.key
+	}
+
+	err := cniwatcher.StartGRPCServer(t.Context(), logger, buf, config)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to create mTLS credentials")
+}
+
 func TestProcessPolicyDenyEvent_RecordsToBuffer(t *testing.T) {
 	// Verify that ProcessPolicyDenyEvent records into the buffer alongside the OTEL emit.
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))

@@ -106,7 +106,7 @@ func TestReceiverGenerateFlow(t *testing.T) {
 	}
 
 	store := topology.NewStore()
-	r := NewReceiver(store, 0, NewTestLogger(t))
+	r := NewReceiver(store, 0, "", NewTestLogger(t))
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

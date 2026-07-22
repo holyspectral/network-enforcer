@@ -65,7 +65,6 @@ type config struct {
 	cniwatcherLabelSelector string
 	cniwatcherGRPCPort      int
 	cniwatcherNamespace     string
-	enableMTLS              bool
 	tlsCertDir              string
 	tlsOpts                 []func(*tls.Config)
 }
@@ -121,7 +120,8 @@ func run(logger *slog.Logger, conf *config) error {
 
 	store := topology.NewStore()
 
-	receiver := receiver.NewReceiver(store, conf.otlpPort, logger)
+	// The OTLP receiver reuses the same pod cert dir as the ScrapeViolations client.
+	receiver := receiver.NewReceiver(store, conf.otlpPort, conf.tlsCertDir, logger)
 	err = mgr.Add(receiver)
 	if err != nil {
 		return fmt.Errorf("unable to add OTLP receiver to manager: %w", err)
@@ -152,7 +152,6 @@ func run(logger *slog.Logger, conf *config) error {
 		&controller.WorkloadNetworkPolicyStatusSyncConfig{
 			AgentPoolConf: grpcexporter.AgentClientPoolConfig{
 				AgentFactoryConfig: grpcexporter.AgentFactoryConfig{
-					MTLSEnabled: conf.enableMTLS,
 					CertDirPath: conf.tlsCertDir,
 					Port:        conf.cniwatcherGRPCPort,
 				},
@@ -215,10 +214,9 @@ func main() {
 		grpcexporter.DefaultAgentPort, "gRPC port of cniwatcher ScrapeViolations server.")
 	flag.StringVar(&conf.cniwatcherNamespace, "cniwatcher-namespace", "",
 		"Namespace where cniwatcher pods run (default: read from service account).")
-	flag.BoolVar(&conf.enableMTLS, "cniwatcher-mtls", false,
-		"Enable mTLS for gRPC connections to cniwatcher pods.")
 	flag.StringVar(&conf.tlsCertDir, "cniwatcher-tls-cert-dir", grpcexporter.DefaultCertDirPath,
-		"Directory containing TLS certificate and key for mTLS connections to cniwatcher pods.")
+		"Directory containing tls.crt, tls.key, and ca.crt for mTLS with cniwatcher pods "+
+			"and the OTLP receiver. When empty, connections are insecure.")
 	flag.Parse()
 
 	slogHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})

@@ -8,7 +8,7 @@ const (
 	// DefaultAgentPort is the gRPC port that cniwatcher serves ScrapeViolations on.
 	DefaultAgentPort = 50051
 
-	// DefaultCertDirPath is the default directory for TLS certificates when mTLS
-	// is enabled.
+	// DefaultCertDirPath is the default directory containing the TLS certificates
+	// used for mTLS with cniwatcher pods.
 	DefaultCertDirPath = "/etc/network-enforcer/certs"
 )

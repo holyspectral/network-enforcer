@@ -51,14 +51,41 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
+DNS name of the controller OTLP service; also a SAN on the controller cert.
+*/}}
+{{- define "network-enforcer.controller.otlpServiceDNS" -}}
+{{ include "network-enforcer.fullname" . }}-otlp.{{ .Release.Namespace }}.svc.cluster.local
+{{- end -}}
+
+{{/*
 Set OTEL endpoint (defaults to controller OTLP service in release namespace)
 */}}
 {{- define "network-enforcer.cniwatcher.otelEndpoint" -}}
 {{- if .Values.cniwatcher.otelEndpoint -}}
 {{- .Values.cniwatcher.otelEndpoint -}}
 {{- else -}}
-{{- printf "%s-otlp.%s.svc.cluster.local:4317" (include "network-enforcer.fullname" .) .Release.Namespace -}}
+{{- printf "%s:4317" (include "network-enforcer.controller.otlpServiceDNS" .) -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Certificate helpers for cniwatcher mTLS (CA issuer and secret share a name).
+*/}}
+{{- define "network-enforcer.caIssuerName" -}}
+{{ include "network-enforcer.fullname" . }}-ca
+{{- end -}}
+{{- define "network-enforcer.caSecretName" -}}
+{{ include "network-enforcer.fullname" . }}-ca
+{{- end -}}
+{{- define "network-enforcer.cniwatcher.certDir" -}}
+/etc/network-enforcer/certs
+{{- end -}}
+
+{{/*
+Certificate directory for OBI mTLS (shares the same CA as cniwatcher).
+*/}}
+{{- define "network-enforcer.obi.certDir" -}}
+/etc/network-enforcer/certs
 {{- end -}}
 
 {{/*
@@ -81,6 +108,9 @@ CNI-specific volume mounts for cniwatcher
   mountPath: /var/log/aws-routed-eni
   readOnly: true
 {{- end }}
+- name: cniwatcher-mtls-certs
+  mountPath: {{ include "network-enforcer.cniwatcher.certDir" . }}
+  readOnly: true
 {{- end -}}
 
 {{/*
@@ -106,4 +136,12 @@ CNI-specific volumes for cniwatcher
     path: /var/log/aws-routed-eni
     type: Directory
 {{- end }}
+- name: cniwatcher-mtls-certs
+  csi:
+    driver: "csi.cert-manager.io"
+    readOnly: true
+    volumeAttributes:
+      csi.cert-manager.io/issuer-name: {{ include "network-enforcer.caIssuerName" . }}
+      csi.cert-manager.io/issuer-kind: Issuer
+      csi.cert-manager.io/dns-names: ${POD_NAME}.${POD_NAMESPACE}
 {{- end -}}

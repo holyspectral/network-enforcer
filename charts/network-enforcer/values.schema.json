@@ -348,6 +348,9 @@
                                         },
                                         "interval": {
                                             "type": "string"
+                                        },
+                                        "protocol": {
+                                            "type": "string"
                                         }
                                     },
                                     "additionalProperties": false
@@ -370,8 +373,80 @@
                 "enabled": {
                     "type": "boolean"
                 },
+                "env": {
+                    "type": "object",
+                    "properties": {
+                        "OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE": {
+                            "type": "string"
+                        },
+                        "OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE": {
+                            "type": "string"
+                        },
+                        "OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false
+                },
                 "preset": {
                     "type": "string"
+                },
+                "volumeMounts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "mountPath": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "readOnly": {
+                                "type": "boolean"
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                },
+                "volumes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "csi": {
+                                "type": "object",
+                                "properties": {
+                                    "driver": {
+                                        "type": "string"
+                                    },
+                                    "readOnly": {
+                                        "type": "boolean"
+                                    },
+                                    "volumeAttributes": {
+                                        "type": "object",
+                                        "properties": {
+                                            "csi.cert-manager.io/dns-names": {
+                                                "type": "string"
+                                            },
+                                            "csi.cert-manager.io/issuer-kind": {
+                                                "type": "string"
+                                            },
+                                            "csi.cert-manager.io/issuer-name": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "additionalProperties": false
+                                    }
+                                },
+                                "additionalProperties": false
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false
+                    }
                 }
             },
             "additionalProperties": true

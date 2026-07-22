@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/rancher-sandbox/network-enforcer/internal/ownerkind"
+	"github.com/rancher-sandbox/network-enforcer/internal/tlsutil"
 	"github.com/rancher-sandbox/network-enforcer/internal/topology"
 )
 
@@ -29,17 +30,21 @@ const (
 type Receiver struct {
 	colmetricspb.UnimplementedMetricsServiceServer
 
-	store  *topology.Store
-	port   int
-	log    *slog.Logger
-	server *grpc.Server
+	store   *topology.Store
+	port    int
+	certDir string
+	log     *slog.Logger
+	server  *grpc.Server
 }
 
-func NewReceiver(store *topology.Store, port int, logger *slog.Logger) *Receiver {
+// NewReceiver creates an OTLP metrics receiver. A non-empty certDir enables
+// mTLS (RequireAndVerifyClientCert); empty runs the server insecure.
+func NewReceiver(store *topology.Store, port int, certDir string, logger *slog.Logger) *Receiver {
 	return &Receiver{
-		store: store,
-		port:  port,
-		log:   logger.With("component", "flowcollector"),
+		store:   store,
+		port:    port,
+		certDir: certDir,
+		log:     logger.With("component", "flowcollector"),
 	}
 }
 
@@ -50,7 +55,19 @@ func (r *Receiver) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to listen on port %d: %w", r.port, err)
 	}
 
-	r.server = grpc.NewServer()
+	var opts []grpc.ServerOption
+	if r.certDir != "" {
+		creds, credsErr := tlsutil.ServerCredentials(r.certDir)
+		if credsErr != nil {
+			return fmt.Errorf("failed to create OTLP receiver mTLS credentials: %w", credsErr)
+		}
+		opts = append(opts, grpc.Creds(creds))
+		r.log.InfoContext(ctx, "OTLP receiver using mTLS", "cert_dir", r.certDir)
+	} else {
+		r.log.InfoContext(ctx, "OTLP receiver running in insecure mode (no mTLS)")
+	}
+
+	r.server = grpc.NewServer(opts...)
 	colmetricspb.RegisterMetricsServiceServer(r.server, r)
 
 	r.log.InfoContext(ctx, "listening", "port", r.port)

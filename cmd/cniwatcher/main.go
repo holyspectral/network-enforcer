@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -18,8 +18,24 @@ import (
 
 const otelShutdownTimeout = 10 * time.Second
 
+func grpcConfigFromFlags() cniwatcher.GRPCServerConfig {
+	port := flag.Int("grpc-port", cniwatcher.DefaultGRPCPort,
+		"Port for the gRPC ScrapeViolations server.")
+	certDir := flag.String("grpc-mtls-cert-dir", "",
+		"Directory containing tls.crt, tls.key, and ca.crt for mTLS. "+
+			"When empty, the gRPC server runs in insecure mode (no TLS).")
+	flag.Parse()
+
+	return cniwatcher.GRPCServerConfig{
+		Port:    *port,
+		CertDir: *certDir,
+	}
+}
+
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	grpcConfig := grpcConfigFromFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -27,6 +43,8 @@ func main() {
 		Ctx:               ctx,
 		Log:               logger,
 		CollectorEndpoint: os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+		// Reuse the pod's ScrapeViolations cert as the OTLP client cert.
+		CertDir: grpcConfig.CertDir,
 	}
 	otelService := otel.NewOpenTelemetryService(otelCfg)
 	if err := otelService.Start(); err != nil {
@@ -61,21 +79,6 @@ func main() {
 	if err != nil {
 		logger.Error("Failed to create cniWatcher", "err", err)
 		os.Exit(1)
-	}
-
-	// Parse gRPC port from env or use default.
-	grpcPort := cniwatcher.DefaultGRPCPort
-	if portStr := os.Getenv("CNIWATCHER_GRPC_PORT"); portStr != "" {
-		if p, parseErr := strconv.Atoi(portStr); parseErr == nil && p > 0 {
-			grpcPort = p
-		}
-	}
-
-	// TODO: Add mTLS support for the gRPC server in a follow-up.
-	// Port tlsutil cert loading behind a --cniwatcher-tls-cert-dir flag so an
-	// insecure default keeps the dev/kind path simple.
-	grpcConfig := cniwatcher.GRPCServerConfig{
-		Port: grpcPort,
 	}
 
 	shutdownCh := make(chan struct{})

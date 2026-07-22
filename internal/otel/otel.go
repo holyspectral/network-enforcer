@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"time"
 
+	"github.com/rancher-sandbox/network-enforcer/internal/tlsutil"
 	"github.com/rancher-sandbox/network-enforcer/internal/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -23,6 +25,8 @@ type OpenTelemetryConfig struct {
 	Ctx               context.Context
 	Log               *slog.Logger
 	CollectorEndpoint string
+	// CertDir enables exporter mTLS; empty means insecure (plaintext).
+	CertDir string
 }
 
 type OpenTelemetryService struct {
@@ -47,9 +51,14 @@ func (s *Service) Start() error {
 		s.Config.CollectorEndpoint = DefaultOtelCollectorEndpoint
 	}
 
+	transportOpt, err := s.exporterTransportOption()
+	if err != nil {
+		return err
+	}
+
 	exporter, err := otlptracegrpc.New(s.Config.Ctx,
 		otlptracegrpc.WithEndpoint(s.Config.CollectorEndpoint),
-		otlptracegrpc.WithInsecure(), // TODO: replace with TLS in production later.
+		transportOpt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create OTLP exporter: %w", err)
@@ -73,6 +82,26 @@ func (s *Service) Start() error {
 	s.Service.Tracer = s.Service.TracerProvider.Tracer("cniwatcher")
 	s.Config.Log.Info("OpenTelemetry initialized", "collector", s.Config.CollectorEndpoint)
 	return nil
+}
+
+func (s *Service) exporterTransportOption() (otlptracegrpc.Option, error) {
+	if s.Config.CertDir == "" {
+		return otlptracegrpc.WithInsecure(), nil
+	}
+
+	// The receiver cert is verified against its DNS name, so drop the port.
+	serverName, _, err := net.SplitHostPort(s.Config.CollectorEndpoint)
+	if err != nil {
+		serverName = s.Config.CollectorEndpoint
+	}
+
+	creds, err := tlsutil.ClientCredentials(s.Config.CertDir, serverName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTLP exporter mTLS credentials: %w", err)
+	}
+
+	s.Config.Log.Info("OTLP exporter using mTLS", "cert_dir", s.Config.CertDir, "server_name", serverName)
+	return otlptracegrpc.WithTLSCredentials(creds), nil
 }
 
 func policiesToStrings(policies []types.Policy) []string {
