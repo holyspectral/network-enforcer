@@ -3,8 +3,6 @@ package e2e_test
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +33,7 @@ func installCilium(ctx context.Context, cfg *envconf.Config) (context.Context, e
 		chartPath     = "/cilium"
 	)
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := getSetupLogger(ctx)
 	manager := helm.New(cfg.KubeconfigFile())
 	// Add the repo locally if not present
 	logger.InfoContext(ctx, "adding cilium local repo", "repo", repoLocalName, "url", repoURL)

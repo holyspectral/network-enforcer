@@ -38,6 +38,7 @@ func TestMain(m *testing.M) {
 		envfuncs.CreateClusterWithConfig(kind.NewProvider(), clusterName, testSuiteConf.kindConfigPath),
 		envfuncs.LoadImageToCluster(clusterName, testSuiteConf.controllerImage),
 		envfuncs.LoadImageToCluster(clusterName, testSuiteConf.cniWatcherImage),
+		injectSetupLogger(),
 		installCNI(testSuiteConf.cni),
 		installCertManager(),
 		installNetEnforcerChart(&testSuiteConf),

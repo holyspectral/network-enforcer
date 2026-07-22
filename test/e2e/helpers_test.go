@@ -2,6 +2,8 @@ package e2e_test
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"testing"
 
 	securityv1alpha1 "github.com/rancher-sandbox/network-enforcer/api/v1alpha1"
@@ -20,7 +22,18 @@ type key string
 
 const (
 	suiteCfgKey = key("suiteConfig")
+	loggerKey   = key("logger")
 )
+
+func injectSetupLogger() env.Func {
+	return func(ctx context.Context, _ *envconf.Config) (context.Context, error) {
+		return context.WithValue(ctx, loggerKey, slog.New(slog.NewJSONHandler(os.Stdout, nil))), nil
+	}
+}
+
+func getSetupLogger(ctx context.Context) *slog.Logger {
+	return ctx.Value(loggerKey).(*slog.Logger)
+}
 
 func injectSuiteConfig(sc suiteConfig) env.Func {
 	return func(ctx context.Context, _ *envconf.Config) (context.Context, error) {
