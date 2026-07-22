@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	defaultChartPath     = "../../charts/network-enforcer"
-	defaultLogsDir       = "./logs"
-	defaultImage         = "ghcr.io/rancher-sandbox/network-enforcer/controller:latest"
-	defaultReleaseName   = "network-enforcer"
-	defaultReleaseNS     = "network-enforcer"
-	defaultNamespacePref = "network-enforcer-e2e"
-	defaultCNI           = cilium
+	defaultChartPath       = "../../charts/network-enforcer"
+	defaultLogsDir         = "./logs"
+	defaultControllerImage = "ghcr.io/rancher-sandbox/network-enforcer/controller:latest"
+	defaultCNIWatcherImage = "ghcr.io/rancher-sandbox/network-enforcer/cniwatcher:latest"
+	defaultReleaseName     = "network-enforcer"
+	defaultReleaseNS       = "network-enforcer"
+	defaultNamespacePref   = "network-enforcer-e2e"
+	defaultCNI             = cilium
 
 	noCNIConfigPath = "./clusters/no-cni.yaml"
 )
@@ -30,7 +31,8 @@ type suiteConfig struct {
 	chartPath       string
 	releaseName     string
 	releaseNS       string
-	image           string
+	controllerImage string
+	cniWatcherImage string
 	namespacePrefix string
 	cni             cniType
 }
@@ -41,7 +43,8 @@ func loadSuiteConfig() suiteConfig {
 		chartPath:       defaultChartPath,
 		releaseName:     defaultReleaseName,
 		releaseNS:       defaultReleaseNS,
-		image:           defaultImage,
+		controllerImage: defaultControllerImage,
+		cniWatcherImage: defaultCNIWatcherImage,
 		namespacePrefix: defaultNamespacePref,
 		cni:             cniType(readEnvOrDefault("E2E_CNI", string(defaultCNI))),
 		kindConfigPath:  noCNIConfigPath,

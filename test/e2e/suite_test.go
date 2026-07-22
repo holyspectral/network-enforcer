@@ -3,11 +3,14 @@ package e2e_test
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/klient/k8s/resources"
 	"sigs.k8s.io/e2e-framework/klient/wait"
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
@@ -32,7 +35,8 @@ func TestMain(m *testing.M) {
 
 	setupFuncs := []env.Func{
 		envfuncs.CreateClusterWithConfig(kind.NewProvider(), clusterName, testSuiteConf.kindConfigPath),
-		envfuncs.LoadImageToCluster(clusterName, testSuiteConf.image),
+		envfuncs.LoadImageToCluster(clusterName, testSuiteConf.controllerImage),
+		envfuncs.LoadImageToCluster(clusterName, testSuiteConf.cniWatcherImage),
 		installCNI(testSuiteConf.cni),
 		installCertManager(),
 		installNetEnforcerChart(&testSuiteConf),
@@ -55,17 +59,22 @@ func TestMain(m *testing.M) {
 
 func installNetEnforcerChart(testCfg *suiteConfig) env.Func {
 	return func(ctx context.Context, cfg *envconf.Config) (context.Context, error) {
+		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 		manager := helm.New(cfg.KubeconfigFile())
 
-		repo, tag := parseImage(testCfg.image)
+		controllerRepo, controllerTag := parseImage(testCfg.controllerImage)
+		cniWatcherRepo, cniWatcherTag := parseImage(testCfg.cniWatcherImage)
 
 		helmOpts := []helm.Option{
 			helm.WithName(testCfg.releaseName),
 			helm.WithNamespace(testCfg.releaseNS),
 			helm.WithChart(testCfg.chartPath),
 			helm.WithArgs("--create-namespace"),
-			helm.WithArgs("--set", fmt.Sprintf("controller.image.repository=%s", repo)),
-			helm.WithArgs("--set", fmt.Sprintf("controller.image.tag=%s", tag)),
+			helm.WithArgs("--set", fmt.Sprintf("controller.image.repository=%s", controllerRepo)),
+			helm.WithArgs("--set", fmt.Sprintf("controller.image.tag=%s", controllerTag)),
+			helm.WithArgs("--set", fmt.Sprintf("cniwatcher.image.repository=%s", cniWatcherRepo)),
+			helm.WithArgs("--set", fmt.Sprintf("cniwatcher.image.tag=%s", cniWatcherTag)),
+			helm.WithArgs("--set", fmt.Sprintf("cniwatcher.cniType=%s", testCfg.cni)),
 			// we reduce the time here to have faster feedback
 			helm.WithArgs("--set", "obi.config.data.otel_metrics_export.interval=3s"),
 			helm.WithArgs("--set", "controller.drainFlowsInterval=3s"),
@@ -74,22 +83,36 @@ func installNetEnforcerChart(testCfg *suiteConfig) env.Func {
 			helm.WithTimeout(defaultHelmTimeout.String()),
 		}
 
+		logger.InfoContext(ctx, "installing network enforcer chart", "releaseName", testCfg.releaseName)
 		if err := manager.RunInstall(helmOpts...); err != nil {
 			return ctx, fmt.Errorf("install network enforcer chart: %w", err)
 		}
 
-		// Wait the Controller to be ready
 		r, err := resources.New(cfg.Client().RESTConfig())
 		if err != nil {
 			return ctx, fmt.Errorf("create resources client: %w", err)
 		}
 
-		err = wait.For(
+		logger.InfoContext(ctx, "waiting for network enforcer controller")
+		if err = wait.For(
 			conditions.New(r).DeploymentAvailable("network-enforcer-controller-manager", testCfg.releaseNS),
 			wait.WithTimeout(defaultOperationTimeout),
-		)
-		if err != nil {
+		); err != nil {
 			return ctx, fmt.Errorf("wait network enforcer deployment ready: %w", err)
+		}
+
+		logger.InfoContext(ctx, "waiting for cniwatcher")
+		if err = wait.For(
+			conditions.New(r).DaemonSetReady(
+				&appsv1.DaemonSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "network-enforcer-cniwatcher",
+						Namespace: testCfg.releaseNS,
+					},
+				}),
+			wait.WithTimeout(defaultOperationTimeout),
+		); err != nil {
+			return ctx, fmt.Errorf("wait network enforcer daemonset ready: %w", err)
 		}
 
 		return ctx, nil

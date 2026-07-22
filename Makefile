@@ -270,10 +270,14 @@ generate-calico-goldmane-proto: download-calico-goldmane-proto ## Generate Go co
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		internal/cniwatcher/calico/goldmane/api.proto
 
+
+# Use `E2E_CNI` env variable to change CNI
+# Example: `make test-e2e E2E_CNI=cilium`
+# If E2E_CNI is not specified the default is `cilium`
 .PHONY: test-e2e
-test-e2e: build-controller-image
+test-e2e: build-controller-image build-cniwatcher-image
 	@echo "🧪 Building chart dependencies..."
 	helm repo add --force-update open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm dependency build charts/network-enforcer
-	@echo "🧪 Running e2e tests..."
+	@echo "🧪 Running e2e tests with '$(E2E_CNI)' CNI..."
 	go test -v ./test/e2e/... -count=1
