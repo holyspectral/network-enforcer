@@ -264,7 +264,7 @@ func TestTopologyScannerReconcileConnection(t *testing.T) {
 			wantErrContains: "multiple policies associated with the same proposal",
 		},
 		{
-			name:      "returns_error_when_workload_selector_cannot_be_resolved",
+			name:      "skips_proposal_when_subject_workload_not_found",
 			direction: networkingv1.PolicyTypeEgress,
 			initialObjects: func(_ *testing.T) []client.Object {
 				return []client.Object{
@@ -272,7 +272,7 @@ func TestTopologyScannerReconcileConnection(t *testing.T) {
 					newDeployment(peer.Namespace, peer.OwnerName, peerLabels),
 				}
 			},
-			wantErrContains: "resolving workload selector",
+			// subject workload is gone: no error, no proposal created
 		},
 	}
 

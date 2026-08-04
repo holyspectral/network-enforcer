@@ -11,6 +11,7 @@ import (
 	otellog "go.opentelemetry.io/otel/log"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -405,6 +406,10 @@ func (ts *TopologyScanner) buildEgressRules(
 	for _, peer := range peerList {
 		rule, err := ts.buildEgressRuleFromPeer(ctx, peer)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				// The workload has been deleted so we can continue for the next peer.
+				continue
+			}
 			return nil, fmt.Errorf("resolving egress peer selector: %w", err)
 		}
 		rules = append(rules, rule)
@@ -422,6 +427,10 @@ func (ts *TopologyScanner) buildIngressRules(
 	for _, peer := range peerList {
 		rule, err := ts.buildIngressRuleFromPeer(ctx, peer)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				// The workload has been deleted so we can continue for the next peer.
+				continue
+			}
 			return nil, fmt.Errorf("resolving ingress peer selector: %w", err)
 		}
 		rules = append(rules, rule)
