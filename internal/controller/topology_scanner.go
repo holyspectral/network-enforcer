@@ -11,6 +11,7 @@ import (
 	otellog "go.opentelemetry.io/otel/log"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -114,7 +115,7 @@ func (ts *TopologyScanner) updateProposal(
 	peers sets.Set[topology.Peer],
 ) error {
 	proposal := getProposalMetadata(workload, direction)
-	if _, err := controllerutil.CreateOrUpdate(ctx, ts.client, proposal, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, ts.client, proposal, func() error {
 		// we recompute the selector only if we are creating the resource the first time.
 		// we could continuously recompute the selector if we want to keep track of updates.
 		// the policyTypes should be empty only when the resource is new.
@@ -127,7 +128,11 @@ func (ts *TopologyScanner) updateProposal(
 			proposal.Spec.PolicyTypes = []networkingv1.PolicyType{direction}
 		}
 		return ts.buildSpec(ctx, direction, &proposal.Spec, peers)
-	}); err != nil {
+	})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return fmt.Errorf("create or update proposal %s/%s: %w", proposal.Namespace, proposal.Name, err)
 	}
 	return nil
@@ -221,31 +226,62 @@ func (ts *TopologyScanner) getMonitorViolations(
 	direction networkingv1.PolicyType,
 	peers sets.Set[topology.Peer],
 ) ([]violationbuf.ViolationRecord, error) {
-	var violations []violationbuf.ViolationRecord
 	switch direction {
 	case networkingv1.PolicyTypeEgress:
-		for _, peer := range peers.UnsortedList() {
-			rule, err := ts.buildEgressRuleFromPeer(ctx, peer)
-			if err != nil {
-				return nil, fmt.Errorf("resolving egress peer selector: %w", err)
-			}
-			if !containsRule(rule, policy.Spec.PolicyTemplate.Egress, securityv1alpha1.EgressRuleEqual) {
-				violations = append(violations, newViolationRecord(workload, policy.Name, direction, peer))
-			}
-		}
+		return ts.egressMonitorViolations(ctx, workload, policy, peers.UnsortedList())
 	case networkingv1.PolicyTypeIngress:
-		for _, peer := range peers.UnsortedList() {
-			rule, err := ts.buildIngressRuleFromPeer(ctx, peer)
-			if err != nil {
-				return nil, fmt.Errorf("resolving ingress peer selector: %w", err)
-			}
-
-			if !containsRule(rule, policy.Spec.PolicyTemplate.Ingress, securityv1alpha1.IngressRuleEqual) {
-				violations = append(violations, newViolationRecord(workload, policy.Name, direction, peer))
-			}
-		}
+		return ts.ingressMonitorViolations(ctx, workload, policy, peers.UnsortedList())
 	default:
 		return nil, fmt.Errorf("unknown direction: %s", direction)
+	}
+}
+
+func (ts *TopologyScanner) egressMonitorViolations(
+	ctx context.Context,
+	workload topology.WorkloadKey,
+	policy *securityv1alpha1.WorkloadNetworkPolicy,
+	peers []topology.Peer,
+) ([]violationbuf.ViolationRecord, error) {
+	var violations []violationbuf.ViolationRecord
+	for _, peer := range peers {
+		rule, err := ts.buildEgressRuleFromPeer(ctx, peer)
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("resolving egress peer selector: %w", err)
+		}
+		if !containsRule(rule, policy.Spec.PolicyTemplate.Egress, securityv1alpha1.EgressRuleEqual) {
+			violations = append(
+				violations,
+				newViolationRecord(workload, policy.Name, networkingv1.PolicyTypeEgress, peer),
+			)
+		}
+	}
+	return violations, nil
+}
+
+func (ts *TopologyScanner) ingressMonitorViolations(
+	ctx context.Context,
+	workload topology.WorkloadKey,
+	policy *securityv1alpha1.WorkloadNetworkPolicy,
+	peers []topology.Peer,
+) ([]violationbuf.ViolationRecord, error) {
+	var violations []violationbuf.ViolationRecord
+	for _, peer := range peers {
+		rule, err := ts.buildIngressRuleFromPeer(ctx, peer)
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("resolving ingress peer selector: %w", err)
+		}
+		if !containsRule(rule, policy.Spec.PolicyTemplate.Ingress, securityv1alpha1.IngressRuleEqual) {
+			violations = append(
+				violations,
+				newViolationRecord(workload, policy.Name, networkingv1.PolicyTypeIngress, peer),
+			)
+		}
 	}
 	return violations, nil
 }
@@ -405,6 +441,9 @@ func (ts *TopologyScanner) buildEgressRules(
 	for _, peer := range peerList {
 		rule, err := ts.buildEgressRuleFromPeer(ctx, peer)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
 			return nil, fmt.Errorf("resolving egress peer selector: %w", err)
 		}
 		rules = append(rules, rule)
@@ -422,6 +461,9 @@ func (ts *TopologyScanner) buildIngressRules(
 	for _, peer := range peerList {
 		rule, err := ts.buildIngressRuleFromPeer(ctx, peer)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
 			return nil, fmt.Errorf("resolving ingress peer selector: %w", err)
 		}
 		rules = append(rules, rule)
