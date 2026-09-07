@@ -1,6 +1,7 @@
 name: Network Enforcer Release
 title: "Network Enforcer <VERSION> release"
 description: Issue with all the items needed to release a new version of Network Enforcer
+projects: ["kubewarden/9"]
 
 body:
   - type: markdown
