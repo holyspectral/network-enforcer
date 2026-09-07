@@ -32,7 +32,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build image
-        uses: rancher-sandbox/runtime-enforcer/.github/actions/container-build@7dbcde44b88775df0c68d9f16301825f82c6cd51
+        uses: kubewarden/runtime-enforcer/.github/actions/container-build@7dbcde44b88775df0c68d9f16301825f82c6cd51
         with:
           arch: ${{ matrix.arch }}
           dockerfile: package/Dockerfile.${{ matrix.component }}
@@ -56,7 +56,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Merge images
-        uses: rancher-sandbox/runtime-enforcer/.github/actions/merge-multiarch@7dbcde44b88775df0c68d9f16301825f82c6cd51
+        uses: kubewarden/runtime-enforcer/.github/actions/merge-multiarch@7dbcde44b88775df0c68d9f16301825f82c6cd51
         with:
           arch: amd64,arm64
           image: ${{ matrix.component }}
