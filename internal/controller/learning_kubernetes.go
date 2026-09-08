@@ -72,7 +72,7 @@ func (r *LearningReconciler) reconcileKubernetesProposal(
 			// we do nothing, the violation are reported by the cni
 			return nil
 		}
-		if err = r.evaluateMonitorViolation(policy, workload, peer, protocol, direction, dstPort); err != nil {
+		if err = r.evaluateMonitorViolation(ctx, policy, workload, peer, protocol, direction, dstPort); err != nil {
 			log.FromContext(ctx).Info("Failed to evaluate monitor violation", "msg", err.Error())
 		}
 		return nil

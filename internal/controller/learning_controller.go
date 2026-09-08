@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	otellog "go.opentelemetry.io/otel/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,9 +33,10 @@ const (
 type LearningReconciler struct {
 	client.Client
 
-	Scheme          *runtime.Scheme
-	eventChan       chan event.TypedGenericEvent[types.LearningEvent]
-	violationBuffer *ringbuf.Buffer[violation.Observation]
+	Scheme              *runtime.Scheme
+	eventChan           chan event.TypedGenericEvent[types.LearningEvent]
+	violationBuffer     *ringbuf.Buffer[violation.Observation]
+	violationOtelLogger otellog.Logger
 }
 
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
@@ -46,6 +48,7 @@ func NewLearningReconciler(
 	client client.Client,
 	scheme *runtime.Scheme,
 	violationBuffer *ringbuf.Buffer[violation.Observation],
+	violationOtelLogger otellog.Logger,
 ) *LearningReconciler {
 	return &LearningReconciler{
 		Client: client,
@@ -54,7 +57,8 @@ func NewLearningReconciler(
 			chan event.TypedGenericEvent[types.LearningEvent],
 			defaultEventChannelBufferSize,
 		),
-		violationBuffer: violationBuffer,
+		violationBuffer:     violationBuffer,
+		violationOtelLogger: violationOtelLogger,
 	}
 }
 

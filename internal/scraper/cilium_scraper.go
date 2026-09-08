@@ -8,6 +8,7 @@ import (
 
 	flowpb "github.com/cilium/cilium/api/v1/flow"
 	hubbleObserver "github.com/cilium/cilium/api/v1/observer"
+	otellog "go.opentelemetry.io/otel/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +23,7 @@ type CiliumScraperConfig struct {
 	Logger               *slog.Logger
 	Endpoint             string
 	EnqueueLearningEvent LearningEnqueueFunc
+	ViolationOtelLogger  otellog.Logger
 	ViolationBuffer      *ringbuf.Buffer[violation.Observation]
 	FlowDumperBuffer     *ringbuf.Buffer[json.RawMessage]
 }
@@ -99,7 +101,8 @@ func (s *CiliumScraper) stream(ctx context.Context, successfulConnection *bool) 
 			}
 		case processFlowOutcomeViolation:
 			s.Logger.InfoContext(ctx, "Received violation", "violation", result.observation)
-			if s.ViolationBuffer.Record(result.observation) {
+			violation.EmitOtelLog(ctx, s.ViolationOtelLogger, result.observation)
+			if dropped := s.ViolationBuffer.Record(result.observation); dropped {
 				s.Logger.WarnContext(ctx, "Violation buffer is full, dropped the oldest violation")
 			}
 		default:
