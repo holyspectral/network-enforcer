@@ -101,19 +101,15 @@ The chart mounts the Secret net-enf-goldmane-client-certs when controller.provid
 |===
 |Rancher Version |Status |Notes
 
-|*2.6.x*
+|*2.9.x*
 |✓ Supported
 |Minimum supported version
 
-|*2.7.x - 2.11.x*
+|*2.10.x - 2.12.x*
 |✓ Supported
 |Fully tested
 
-|*2.12.x*
-|✓ Supported
-|Latest tested version (up to 2.12.100)
-
-|*2.13.x+*
+|*2.13.x - 2.15.x*
 |Expected
 |Should work but not yet verified
 |===

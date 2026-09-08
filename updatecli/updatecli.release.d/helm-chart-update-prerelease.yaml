@@ -22,6 +22,10 @@ sources:
       versionfilter:
         kind: "semver"
         pattern: ">=v0.0.0-0" # -0 suffix is required to get prerelease
+  readmeFile:
+    kind: file
+    spec:
+      file: "./README.md"
 
 scms:
   default:
@@ -92,3 +96,11 @@ targets:
     spec:
       file: charts/network-enforcer/values.yaml
       key: $.controller.image.tag
+  update_readme:
+    scmid: default
+    name: Update Helm chart README
+    kind: file
+    sourceid: readmeFile
+    spec:
+      file: charts/network-enforcer/README.md
+      forcecreate: true
