@@ -1,13 +1,21 @@
 name: Update helm charts
 on:
   workflow_call:
+    secrets:
+      APP_ID:
+        required: true
+      APP_PRIVATE_KEY:
+        required: true
+      APP_INSTALLATION_ID:
+        required: true
+  workflow_dispatch:
 jobs:
   update-network-enforcer-charts:
     name: Update NetworkEnforcer charts
     runs-on: ubuntu-latest
     permissions:
-      contents: write # for updatecli to update the repository
-      pull-requests: write # for updatecli to create a PR
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -19,6 +27,7 @@ jobs:
 
       - name: Update NetworkEnforcer charts
         env:
-          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+          UPDATECLI_GITHUB_APP_CLIENT_ID: ${{ secrets.APP_ID }}
+          UPDATECLI_GITHUB_APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          UPDATECLI_GITHUB_APP_INSTALLATION_ID: "${{ secrets.APP_INSTALLATION_ID }}"
         run: "updatecli compose apply --file updatecli/updatecli-compose.release.yaml"

@@ -70,10 +70,8 @@ scms:
     spec:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
-      owner: "{{ requiredEnv .github.owner }}"
+      owner: "{{ .github.owner }}"
       repository: "network-enforcer"
-      token: "{{ requiredEnv .github.token }}"
-      username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitusingapi: true
       commitmessage:

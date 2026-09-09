@@ -13,9 +13,8 @@ sources:
     name: "Get latest network-enforcer version"
     kind: githubrelease
     spec:
-      owner: '{{ requiredEnv .github.owner }}'
+      owner: '{{ .github.owner }}'
       repository: network-enforcer
-      token: '{{ requiredEnv .github.token }}'
       typefilter: # Getting both pre-releases and releases
         prerelease: true
         release: true
@@ -34,10 +33,8 @@ scms:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
       directory: "/tmp/helm-charts"
-      owner: "{{ requiredEnv .github.owner }}"
+      owner: "{{ .github.owner }}"
       repository: "network-enforcer"
-      token: "{{ requiredEnv .github.token }}"
-      username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitusingapi: true
       commitmessage:
