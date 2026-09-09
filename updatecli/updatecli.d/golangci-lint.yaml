@@ -9,7 +9,6 @@ sources:
     spec:
       owner: golangci
       repository: golangci-lint
-      token: "{{ requiredEnv .github.token }}"
       typefilter: # Only official releases, no pre-releases nor drafts
         release: true
       versionfilter:
@@ -91,10 +90,8 @@ scms:
     spec:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
-      owner: "{{ requiredEnv .github.owner }}"
+      owner: "{{ .github.owner }}"
       repository: "network-enforcer"
-      token: "{{ requiredEnv .github.token }}"
-      username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitusingapi: true
       commitmessage:
