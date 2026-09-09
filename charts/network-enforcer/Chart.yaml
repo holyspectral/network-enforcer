@@ -1,13 +1,27 @@
 apiVersion: v2
 name: network-enforcer
-description: SUSE Security Network Enforcer helm chart
+description: A security Network Enforcer for Kubernetes.
+icon: https://www.kubewarden.io/images/icon-kubewarden.svg
+keywords:
+  - Kubewarden
+  - Security
+  - Infrastructure
+  - NetworkEnforcer
+  - NetworkPolicy
+  - Observability
+home: https://www.kubewarden.io/
+maintainers:
+  - name: Kubewarden Maintainers
+    email: cncf-kubewarden-maintainers@lists.cncf.io
+    url: https://github.com/orgs/kubewarden/teams/maintainers
 type: application
 version: 0.1.2
 appVersion: v0.2.0
 
 annotations:
   catalog.cattle.io/certified: rancher
-  catalog.cattle.io/namespace: network-enforcer
+  # Must prefix with cattle- and suffix with -system
+  catalog.cattle.io/namespace: cattle-network-enforcer-system
   catalog.cattle.io/release-name: rancher-network-enforcer
   catalog.cattle.io/ui-component: network-enforcer
   catalog.cattle.io/display-name: NetworkEnforcer
@@ -15,5 +29,6 @@ annotations:
   catalog.cattle.io/provides-gvr: "networkenforcer.kubewarden.io/v1alpha1"
   catalog.cattle.io/requests-cpu: "500m"
   catalog.cattle.io/requests-memory: "128Mi"
-  catalog.cattle.io/rancher-version: ">= 2.6.0-0 <= 2.12.100-0"
+  # ValidatingAdmissionPolicy (admissionregistration.k8s.io/v1) requires Kubernetes 1.30+
+  catalog.cattle.io/rancher-version: ">= 2.9.1-0 <= 2.15.100-0"
   catalog.cattle.io/type: cluster-tool
