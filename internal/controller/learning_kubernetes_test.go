@@ -33,7 +33,7 @@ func newTestLearningReconciler(t *testing.T, objs []client.Object) *LearningReco
 		WithScheme(scheme).
 		WithObjects(objs...).
 		Build()
-	r := NewLearningReconciler(cl, scheme, ringbuf.New[violation.Observation]())
+	r := NewLearningReconciler(cl, scheme, ringbuf.New[violation.Observation](), nil)
 	require.NotNil(t, r)
 	return r
 }

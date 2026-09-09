@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 
+	otellog "go.opentelemetry.io/otel/log"
 	"google.golang.org/grpc"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,6 +28,7 @@ type CalicoScraperConfig struct {
 	Endpoint             string
 	EnqueueLearningEvent LearningEnqueueFunc
 	Logger               *slog.Logger
+	ViolationOtelLogger  otellog.Logger
 	ViolationBuffer      *ringbuf.Buffer[violation.Observation]
 	FlowDumperBuffer     *ringbuf.Buffer[json.RawMessage]
 }
@@ -115,7 +117,8 @@ func (s *CalicoScraper) stream(ctx context.Context, successfulConnection *bool) 
 			}
 		case processFlowOutcomeViolation:
 			s.Logger.InfoContext(ctx, "Received violation", "violation", result.observation)
-			if s.ViolationBuffer.Record(result.observation) {
+			violation.EmitOtelLog(ctx, s.ViolationOtelLogger, result.observation)
+			if dropped := s.ViolationBuffer.Record(result.observation); dropped {
 				s.Logger.WarnContext(ctx, "Violation buffer is full, dropped the oldest violation")
 			}
 		default:

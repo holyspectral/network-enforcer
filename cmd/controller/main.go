@@ -141,6 +141,7 @@ func setupProviderScraper(
 			Logger:               logger.With("component", "cilium-scraper"),
 			Endpoint:             conf.provider.endpoint,
 			EnqueueLearningEvent: learningEnqueueFunc,
+			ViolationOtelLogger:  eventLogger,
 			ViolationBuffer:      violationBuffer,
 			FlowDumperBuffer:     flowDumperBuffer,
 		})
@@ -154,6 +155,7 @@ func setupProviderScraper(
 			EnqueueLearningEvent: learningEnqueueFunc,
 			Logger:               logger.With("component", "calico-scraper"),
 			Client:               mgr.GetClient(),
+			ViolationOtelLogger:  eventLogger,
 			ViolationBuffer:      violationBuffer,
 			FlowDumperBuffer:     flowDumperBuffer,
 		})
@@ -299,7 +301,12 @@ func run(logger *slog.Logger, conf *config) error {
 		}
 	}
 
-	learningReconciler := controller.NewLearningReconciler(mgr.GetClient(), mgr.GetScheme(), violationBuffer)
+	learningReconciler := controller.NewLearningReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		violationBuffer,
+		eventLogger,
+	)
 	if err = learningReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create learning reconciler: %w", err)
 	}

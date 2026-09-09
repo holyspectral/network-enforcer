@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 func (r *LearningReconciler) evaluateMonitorViolation(
+	ctx context.Context,
 	policy securityv1alpha1.WorkloadNetworkPolicy,
 	workload *securityv1alpha1.WorkloadRef,
 	peer *securityv1alpha1.WorkloadRef,
@@ -25,11 +27,11 @@ func (r *LearningReconciler) evaluateMonitorViolation(
 	switch direction {
 	case networkingv1.PolicyTypeEgress:
 		if !containsPeerPort(spec.Egress, policyPeer, policyPort) {
-			return r.sendMonitorViolation(policy.Name, workload, peer, protocol, direction, dstPort)
+			return r.sendMonitorViolation(ctx, policy.Name, workload, peer, protocol, direction, dstPort)
 		}
 	case networkingv1.PolicyTypeIngress:
 		if !containsPeerPort(spec.Ingress, policyPeer, policyPort) {
-			return r.sendMonitorViolation(policy.Name, workload, peer, protocol, direction, dstPort)
+			return r.sendMonitorViolation(ctx, policy.Name, workload, peer, protocol, direction, dstPort)
 		}
 	default:
 		return fmt.Errorf("unknown policy direction %q", direction)
@@ -73,6 +75,7 @@ func containsPeerPort[T peerPortRule](
 }
 
 func (r *LearningReconciler) sendMonitorViolation(
+	ctx context.Context,
 	policyName string,
 	workload *securityv1alpha1.WorkloadRef,
 	peer *securityv1alpha1.WorkloadRef,
@@ -81,6 +84,7 @@ func (r *LearningReconciler) sendMonitorViolation(
 	dstPort int32,
 ) error {
 	obs := generateViolationObservation(policyName, workload, peer, protocol, direction, dstPort)
+	violation.EmitOtelLog(ctx, r.violationOtelLogger, obs)
 	if r.violationBuffer.Record(obs) {
 		return fmt.Errorf("violation buffer full, dropping violation observation: %v", obs)
 	}
