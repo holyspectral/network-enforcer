@@ -32,7 +32,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build image
-        uses: kubewarden/runtime-enforcer/.github/actions/container-build@84d70cdf10413998a6d62cb5d3d0bea35ea3cbc5
+        uses: kubewarden/runtime-enforcer/.github/actions/container-build@fbb78c28e366142fe8d20da2aa3957eba1fdac96
         with:
           arch: ${{ matrix.arch }}
           dockerfile: package/Dockerfile.${{ matrix.component }}
