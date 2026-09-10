@@ -229,7 +229,7 @@ no longer exported as OpenTelemetry logs.
 
 [source,bash]
 ----
-helm repo add network-enforcer https://kubewarden.github.io/network-enforcer/
+helm repo add kubewarden https://charts.kubewarden.io
 helm repo update
 ----
 
@@ -237,7 +237,7 @@ Install the chart with the provider you prepared above (`istio`, `calico` or `ci
 
 [source,bash]
 ----
-helm install network-enforcer network-enforcer/network-enforcer \
+helm install network-enforcer kubewarden/network-enforcer \
   --namespace network-enforcer \
   --create-namespace \
   --set controller.provider.name=istio \
