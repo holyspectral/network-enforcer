@@ -144,6 +144,8 @@ make run               # Run locally (uses current kubeconfig context)
 
 Tests use **Ginkgo + Gomega** (BDD style). Check `suite_test.go` for setup.
 
+See [setup-development-env](https://docs.kubewarden.io/network-enforcer/latest/en/setup-development-env.html) for development setup.
+
 ## Deployment Workflow
 
 ```bash
