@@ -717,6 +717,16 @@ spec:
                         dest:
                           description: Dest is the workload that received the traffic.
                           properties:
+                            external:
+                              description: |-
+                                External indicates this ref does not correspond to a Kubernetes-managed
+                                workload (e.g. a Cilium reserved:* identity such as reserved:kube-apiserver
+                                or reserved:host, or a Calico HostEndpoint/NetworkSet/Network destination
+                                such as traffic to the well-known "kubernetes" Service). When true,
+                                OwnerKind and Namespace are empty and OwnerName holds a descriptive,
+                                non-resource name used only for classification and display, not a real
+                                object that can be looked up.
+                              type: boolean
                             identity:
                               description: |-
                                 Identity is the istio-specific workload identity.
@@ -805,6 +815,16 @@ spec:
                         source:
                           description: Source is the workload that initiated the traffic.
                           properties:
+                            external:
+                              description: |-
+                                External indicates this ref does not correspond to a Kubernetes-managed
+                                workload (e.g. a Cilium reserved:* identity such as reserved:kube-apiserver
+                                or reserved:host, or a Calico HostEndpoint/NetworkSet/Network destination
+                                such as traffic to the well-known "kubernetes" Service). When true,
+                                OwnerKind and Namespace are empty and OwnerName holds a descriptive,
+                                non-resource name used only for classification and display, not a real
+                                object that can be looked up.
+                              type: boolean
                             identity:
                               description: |-
                                 Identity is the istio-specific workload identity.
@@ -946,6 +966,16 @@ spec:
                     dest:
                       description: Dest is the workload that received the traffic.
                       properties:
+                        external:
+                          description: |-
+                            External indicates this ref does not correspond to a Kubernetes-managed
+                            workload (e.g. a Cilium reserved:* identity such as reserved:kube-apiserver
+                            or reserved:host, or a Calico HostEndpoint/NetworkSet/Network destination
+                            such as traffic to the well-known "kubernetes" Service). When true,
+                            OwnerKind and Namespace are empty and OwnerName holds a descriptive,
+                            non-resource name used only for classification and display, not a real
+                            object that can be looked up.
+                          type: boolean
                         identity:
                           description: |-
                             Identity is the istio-specific workload identity.
@@ -1033,6 +1063,16 @@ spec:
                     source:
                       description: Source is the workload that initiated the traffic.
                       properties:
+                        external:
+                          description: |-
+                            External indicates this ref does not correspond to a Kubernetes-managed
+                            workload (e.g. a Cilium reserved:* identity such as reserved:kube-apiserver
+                            or reserved:host, or a Calico HostEndpoint/NetworkSet/Network destination
+                            such as traffic to the well-known "kubernetes" Service). When true,
+                            OwnerKind and Namespace are empty and OwnerName holds a descriptive,
+                            non-resource name used only for classification and display, not a real
+                            object that can be looked up.
+                          type: boolean
                         identity:
                           description: |-
                             Identity is the istio-specific workload identity.

@@ -133,11 +133,14 @@ controller:
         # Relay certs are issued for *.hubble-relay.cilium.io.
         serverName: ui.hubble-relay.cilium.io
     calico:
+      # Goldmane address (host:port). Default is operator-managed Goldmane in
+      # calico-system over mTLS. For a plaintext Goldmane (e.g. canal without
+      # Typha), point endpoint at it and set tls.mode=insecure.
       endpoint: goldmane.calico-system.svc:7443
       tls:
-        # Calico is a TLS client to Goldmane. Goldmane rejects plaintext, so
-        # insecure is not a valid mode.
-        # @schema enum: [issuer, existingSecret]
+        # Calico is a TLS client to Goldmane. Use insecure when Goldmane is
+        # served without a server certificate (plaintext gRPC).
+        # @schema enum: [issuer, existingSecret, insecure]
         mode: existingSecret
         issuerRef:
           name: ""

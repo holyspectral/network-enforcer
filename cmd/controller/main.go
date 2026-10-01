@@ -149,17 +149,6 @@ func newProviderCertSource(mgr manager.Manager, conf *config) (certsource.Source
 	return source, nil
 }
 
-// validateCalicoTLSMode rejects plaintext; Goldmane requires mTLS.
-func validateCalicoTLSMode(tlsMode string) error {
-	if certsource.Mode(tlsMode) == certsource.ModeInsecure {
-		return fmt.Errorf(
-			"calico provider does not support TLS mode %q; use existingSecret or issuer",
-			tlsMode,
-		)
-	}
-	return nil
-}
-
 func setupProviderScraper(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -217,9 +206,6 @@ func setupProviderScraper(
 		}
 		return nil
 	case types.ProviderCalico:
-		if err := validateCalicoTLSMode(conf.provider.tlsMode); err != nil {
-			return err
-		}
 		certSource, err := newProviderCertSource(mgr, conf)
 		if err != nil {
 			return err

@@ -38,9 +38,21 @@ type WorkloadRef struct {
 	// Selector is the label selector for the workload.
 	// +optional
 	Selector metav1.LabelSelector `json:"selector,omitempty"`
+	// External indicates this ref does not correspond to a Kubernetes-managed
+	// workload (e.g. a Cilium reserved:* identity such as reserved:kube-apiserver
+	// or reserved:host, or a Calico HostEndpoint/NetworkSet/Network destination
+	// such as traffic to the well-known "kubernetes" Service). When true,
+	// OwnerKind and Namespace are empty and OwnerName holds a descriptive,
+	// non-resource name used only for classification and display, not a real
+	// object that can be looked up.
+	// +optional
+	External bool `json:"external,omitempty"`
 }
 
 func (r *WorkloadRef) IsSupported() bool {
+	if r.External {
+		return false
+	}
 	switch r.OwnerKind { //nolint:exhaustive // some kinds like Service are not valid endpoints for now.
 	case WorkloadKindDeployment, WorkloadKindStatefulSet, WorkloadKindDaemonSet:
 		return true

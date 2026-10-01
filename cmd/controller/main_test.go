@@ -95,43 +95,6 @@ func TestIstioTLSCertDir(t *testing.T) {
 	}
 }
 
-func TestValidateCalicoTLSMode(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name    string
-		tlsMode string
-		wantErr string
-	}{
-		{
-			name:    "rejects insecure",
-			tlsMode: string(certsource.ModeInsecure),
-			wantErr: `calico provider does not support TLS mode "insecure"; use existingSecret or issuer`,
-		},
-		{
-			name:    "allows existingSecret",
-			tlsMode: string(certsource.ModeExistingSecret),
-		},
-		{
-			name:    "allows issuer",
-			tlsMode: string(certsource.ModeIssuer),
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			err := validateCalicoTLSMode(tc.tlsMode)
-			if tc.wantErr != "" {
-				require.EqualError(t, err, tc.wantErr)
-				return
-			}
-			require.NoError(t, err)
-		})
-	}
-}
-
 func TestNewProviderCertSource(t *testing.T) {
 	t.Parallel()
 

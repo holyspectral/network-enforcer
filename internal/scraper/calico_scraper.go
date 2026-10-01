@@ -3,12 +3,13 @@ package scraper
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 
 	otellog "go.opentelemetry.io/otel/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubewarden/network-enforcer/internal/certsource"
@@ -32,7 +33,7 @@ type CalicoScraperConfig struct {
 	ViolationBuffer      *ringbuf.Buffer[violation.Observation]
 	FlowDumperBuffer     *ringbuf.Buffer[json.RawMessage]
 	// CertSource supplies Goldmane mTLS material.
-	// Required; Goldmane rejects plaintext connections.
+	// A nil CertSource means the hop runs in plaintext (Goldmane served without a server certificate).
 	// Material is re-read on every dial so CA rotation is picked up on reconnect.
 	CertSource    certsource.Source
 	TLSServerName string
@@ -54,9 +55,10 @@ func (s *CalicoScraper) Start(ctx context.Context) error {
 
 // TLSServerName overrides the endpoint host for SNI/authority when set.
 // Material is re-read on every call, so rotation is picked up on the next reconnect.
-func (s *CalicoScraper) dialOptions(ctx context.Context) ([]grpc.DialOption, error) {
+func (s *CalicoScraper) transportCredentials(ctx context.Context) (credentials.TransportCredentials, error) {
 	if s.CertSource == nil {
-		return nil, errors.New("goldmane requires TLS credentials; set --provider-tls-mode=existingSecret or issuer")
+		s.Logger.WarnContext(ctx, "Connecting to Goldmane without TLS")
+		return insecure.NewCredentials(), nil
 	}
 	serverName, err := resolveTLSServerName(s.Endpoint, s.TLSServerName, "Goldmane")
 	if err != nil {
@@ -71,10 +73,17 @@ func (s *CalicoScraper) dialOptions(ctx context.Context) ([]grpc.DialOption, err
 		return nil, fmt.Errorf("failed to build TLS credentials for Goldmane: %w", err)
 	}
 	s.Logger.InfoContext(ctx, "Using TLS credentials for Goldmane connection", "serverName", serverName)
+	return creds, nil
+}
 
+func (s *CalicoScraper) dialOptions(ctx context.Context) ([]grpc.DialOption, error) {
+	creds, err := s.transportCredentials(ctx)
+	if err != nil {
+		return nil, err
+	}
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	// gRPC overwrites tls.Config.ServerName with the channel authority, so the override must be the authority.
-	if s.TLSServerName != "" {
+	if s.CertSource != nil && s.TLSServerName != "" {
 		opts = append(opts, grpc.WithAuthority(s.TLSServerName))
 	}
 	return opts, nil

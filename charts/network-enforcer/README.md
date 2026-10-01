@@ -113,9 +113,13 @@ applied; values under inactive providers are ignored.
 | `cilium` | `hubble-relay.kube-system.svc:443` | `existingSecret` | `kube-system/hubble-relay-client-certs`, server name `ui.hubble-relay.cilium.io` |
 | `calico` | `goldmane.calico-system.svc:7443` | `existingSecret` | `calico-system/goldmane-key-pair` + `goldmane-ca-bundle` (CA key `tigera-ca-bundle.crt`) |
 
-Calico does not support `insecure`: Goldmane requires mTLS. Cilium `insecure` is
-plaintext to Relay port 80: set `tls.mode=insecure` and clear `tls.serverName`.
-If `endpoint` is still the default `:443`, the chart rewrites it to `:80`.
+Both Cilium and Calico support `insecure` (plaintext) mode. Set
+`tls.mode=insecure` and clear `tls.serverName`. Use it for a Cilium Hubble Relay
+or a Calico Goldmane that is served without a server certificate (for example a
+`canal` install without Typha, where Felix speaks to Goldmane in plaintext). For
+Cilium, if `endpoint` is still the default `:443`, the chart rewrites it to
+`:80`; for Calico, point `endpoint` at the plaintext Goldmane service
+(e.g. `goldmane.kube-system.svc:7443`).
 
 Override examples:
 

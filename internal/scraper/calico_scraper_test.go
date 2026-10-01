@@ -15,6 +15,18 @@ func newTestCalicoScraper(conf CalicoScraperConfig) *CalicoScraper {
 	return NewCalicoScraper(conf)
 }
 
+func TestCalicoScraperTransportCredentialsInsecure(t *testing.T) {
+	t.Parallel()
+
+	scraper := newTestCalicoScraper(CalicoScraperConfig{
+		Endpoint: "goldmane.kube-system.svc:7443",
+	})
+
+	creds, err := scraper.transportCredentials(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "insecure", creds.Info().SecurityProtocol)
+}
+
 func TestCalicoScraperDialOptions(t *testing.T) {
 	t.Parallel()
 
@@ -44,11 +56,11 @@ func TestCalicoScraperDialOptions(t *testing.T) {
 			expectedOptCount: 2,
 		},
 		{
-			name: "nil cert source",
+			name: "nil cert source yields plaintext",
 			conf: CalicoScraperConfig{
 				Endpoint: "goldmane.calico-system.svc:7443",
 			},
-			wantErr: "goldmane requires TLS credentials",
+			expectedOptCount: 1,
 		},
 	}
 
@@ -82,11 +94,10 @@ func TestCalicoScraperNewGoldmaneClient(t *testing.T) {
 		wantCalls int
 	}{
 		{
-			name: "nil cert source",
+			name: "nil cert source yields plaintext",
 			conf: CalicoScraperConfig{
 				Endpoint: "goldmane.calico-system.svc:7443",
 			},
-			wantErr: "goldmane requires TLS credentials",
 		},
 		{
 			name: "endpoint without a port",

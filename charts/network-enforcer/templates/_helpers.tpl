@@ -264,9 +264,6 @@ Validate provider TLS values and fail at template time.
 {{- $tls := include "network-enforcer.provider.tls.values" . | fromJson -}}
 {{- $secret := include "network-enforcer.provider.tls.existingSecret" . | fromJson -}}
 {{- $provider := include "network-enforcer.provider.name" . -}}
-{{- if and (eq $provider "calico") (eq $mode "insecure") -}}
-{{- fail (printf "%s.mode=insecure is not supported when controller.provider.name=calico; Goldmane requires mTLS (use existingSecret or issuer)" $path) -}}
-{{- end -}}
 {{- if not (has $mode (list "issuer" "existingSecret" "insecure")) -}}
 {{- fail (printf "%s.mode must be issuer, existingSecret, or insecure (got %q)" $path $mode) -}}
 {{- end -}}

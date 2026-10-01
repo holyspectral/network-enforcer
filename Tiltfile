@@ -30,6 +30,20 @@ helm_set_values = [
 	"controller.flowDumper.enabled=true",
 ]
 
+# Apply per-provider overrides from tilt-settings for the active provider only.
+# For calico this allows pointing at a plaintext Goldmane (e.g. in kube-system)
+# with tls.mode=insecure instead of the operator-managed mTLS defaults.
+if providerName == "calico":
+    calico = settings.get("controller").get("calico", {})
+    calico_endpoint = calico.get("endpoint")
+    if calico_endpoint:
+        helm_set_values.append("controller.provider.calico.endpoint=" + calico_endpoint)
+    calico_tls_mode = calico.get("tlsMode")
+    if calico_tls_mode:
+        helm_set_values.append("controller.provider.calico.tls.mode=" + calico_tls_mode)
+        if calico_tls_mode == "insecure":
+            helm_set_values.append("controller.provider.calico.tls.serverName=")
+
 yaml = helm(
     "./charts/network-enforcer",
     name="network-enforcer",

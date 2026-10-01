@@ -47,6 +47,34 @@ tests:
           path: spec.template.spec.containers[0].args
           content: --provider-tls-ca-bundle-key=tigera-ca-bundle.crt
 
+  - it: "runs calico in plaintext against Goldmane in insecure mode"
+    set:
+      controller:
+        provider:
+          name: calico
+          calico:
+            endpoint: goldmane.kube-system.svc:7443
+            tls:
+              mode: insecure
+              serverName: ""
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --provider-tls-mode=insecure
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --provider-endpoint=goldmane.kube-system.svc:7443
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --provider-tls-cert-secret=calico-system/goldmane-key-pair
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --provider-tls-ca-configmap=calico-system/goldmane-ca-bundle
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: provider-tls
+
   - it: "defaults cilium to Cilium's own client Secret in kube-system"
     set:
       controller:
