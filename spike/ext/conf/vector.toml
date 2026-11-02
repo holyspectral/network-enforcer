@@ -1,0 +1,12 @@
+data_dir = "/data/state"
+
+[sources.in]
+type = "file"
+include = ["/data/logs/*.log*"]
+read_from = "end"
+
+[sinks.out]
+type = "console"
+inputs = ["in"]
+target = "stdout"
+encoding.codec = "json"

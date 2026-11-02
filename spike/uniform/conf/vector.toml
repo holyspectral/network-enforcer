@@ -1,0 +1,19 @@
+data_dir = "/data/state"
+
+[sources.in]
+type = "file"
+include = ["/data/logs/*.log*"]
+read_from = "end"
+
+# Do the uniform per-line work: append the constant "ASD".
+[transforms.work]
+type = "remap"
+inputs = ["in"]
+source = '.message = string!(.message) + "ASD"'
+
+# Emit the raw message, so the receiver sees the markers and the ASD suffix.
+[sinks.out]
+type = "console"
+inputs = ["work"]
+target = "stdout"
+encoding.codec = "text"

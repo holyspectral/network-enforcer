@@ -1,0 +1,23 @@
+extensions:
+  file_storage:
+    directory: /data/state
+receivers:
+  filelog:
+    include: [/data/logs/*.log*]
+    start_at: end
+    poll_interval: 200ms
+    force_flush_period: 0
+    on_truncate: read_new
+    storage: file_storage
+exporters:
+  file:
+    path: /dev/stdout
+service:
+  extensions: [file_storage]
+  telemetry:
+    metrics:
+      level: none
+  pipelines:
+    logs:
+      receivers: [filelog]
+      exporters: [file]

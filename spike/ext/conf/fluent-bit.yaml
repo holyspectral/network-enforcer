@@ -1,0 +1,16 @@
+service:
+  flush: 0.2
+  grace: 5
+  log_level: info
+pipeline:
+  inputs:
+    - name: tail
+      path: /data/logs/*.log*
+      read_from_head: false
+      db: /data/state/fb.db
+      refresh_interval: 1
+      inotify_watcher: true
+  outputs:
+    - name: stdout
+      match: "*"
+      format: json_lines
