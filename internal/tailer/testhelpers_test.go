@@ -28,6 +28,16 @@ func appendLines(t *testing.T, path string, from, to int) {
 	}
 }
 
+// appendRaw appends a raw string to path.
+func appendRaw(t *testing.T, path, s string) {
+	t.Helper()
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	require.NoError(t, err)
+	defer f.Close()
+	_, err = f.WriteString(s)
+	require.NoError(t, err)
+}
+
 // wantTexts returns the message texts for indices [from, to).
 func wantTexts(from, to int) []string {
 	var out []string

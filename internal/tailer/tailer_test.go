@@ -10,7 +10,7 @@ import (
 )
 
 // startTailer builds and starts a tailer. It stops the tailer at test end.
-func startTailer(t *testing.T, cfg Config, c *collector) *Tailer {
+func startTailer(t *testing.T, cfg Config, c *collector) {
 	t.Helper()
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = 50 * time.Millisecond
@@ -19,7 +19,6 @@ func startTailer(t *testing.T, cfg Config, c *collector) *Tailer {
 	require.NoError(t, err)
 	require.NoError(t, tl.Start(context.Background()))
 	t.Cleanup(func() { _ = tl.Stop() })
-	return tl
 }
 
 func TestTailerStartsAtEnd(t *testing.T) {
@@ -49,4 +48,24 @@ func TestTailerStopWithoutStart(t *testing.T) {
 	require.NoError(t, err)
 	err = tl.Stop()
 	require.NoError(t, err)
+}
+
+func TestTailerNoPartialLine(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(300 * time.Millisecond)
+
+	full := criLine(100) + "\n"
+	half := len(full) / 2
+	appendRaw(t, log, full[:half])
+	time.Sleep(300 * time.Millisecond)
+	require.Empty(t, c.snapshot(), "a partial line was emitted")
+
+	appendRaw(t, log, full[half:])
+	waitForSet(c, wantTexts(100, 101), 3*time.Second)
+	require.Equal(t, wantTexts(100, 101), c.snapshot())
 }
