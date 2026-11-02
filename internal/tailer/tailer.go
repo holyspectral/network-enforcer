@@ -81,8 +81,9 @@ type Tailer struct {
 	saved    []savedCheckpoint
 	firstRun bool
 
-	mu    sync.Mutex
-	files map[uint64]*fileState
+	mu      sync.Mutex
+	started bool
+	files   map[uint64]*fileState
 
 	stop chan struct{}
 	done chan struct{}
@@ -110,8 +111,16 @@ func New(cfg Config, h Handler) (*Tailer, error) {
 }
 
 // Start runs the first poll and then polls on the interval until Stop or the
-// context ends.
+// context ends. Calling Start multiple times is a no-op after the first call.
 func (t *Tailer) Start(ctx context.Context) error {
+	t.mu.Lock()
+	if t.started {
+		t.mu.Unlock()
+		return nil
+	}
+	t.started = true
+	t.mu.Unlock()
+
 	t.poll(true)
 	go func() {
 		defer close(t.done)
@@ -133,8 +142,17 @@ func (t *Tailer) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop ends the poll loop and waits for it.
+// Stop ends the poll loop and waits for it. Stop is safe to call even if
+// Start was never called.
 func (t *Tailer) Stop() error {
+	t.mu.Lock()
+	started := t.started
+	t.mu.Unlock()
+
+	if !started {
+		return nil
+	}
+
 	select {
 	case <-t.stop:
 	default:

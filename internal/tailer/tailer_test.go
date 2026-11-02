@@ -41,3 +41,12 @@ func TestNewRejectsEmptyGlob(t *testing.T) {
 	_, err := New(Config{}, func(Line) {})
 	require.Error(t, err)
 }
+
+func TestTailerStopWithoutStart(t *testing.T) {
+	dir := t.TempDir()
+	cfg := Config{Glob: glob(dir)}
+	tl, err := New(cfg, func(Line) {})
+	require.NoError(t, err)
+	err = tl.Stop()
+	require.NoError(t, err)
+}

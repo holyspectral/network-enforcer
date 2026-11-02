@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"sync"
 	"testing"
 	"time"
@@ -27,18 +26,6 @@ func appendLines(t *testing.T, path string, from, to int) {
 		_, writeErr := f.WriteString(criLine(i) + "\n")
 		require.NoError(t, writeErr)
 	}
-}
-
-// appendRaw appends a raw string to path (used in later tasks).
-//
-//nolint:unused // used in later tasks
-func appendRaw(t *testing.T, path, s string) {
-	t.Helper()
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	require.NoError(t, err)
-	defer f.Close()
-	_, writeErr := f.WriteString(s)
-	require.NoError(t, writeErr)
 }
 
 // wantTexts returns the message texts for indices [from, to).
@@ -107,15 +94,6 @@ func waitForSet(c *collector, want []string, d time.Duration) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	time.Sleep(600 * time.Millisecond)
-}
-
-// sortedTexts returns a sorted copy for stable comparison (used in later tasks).
-//
-//nolint:unused // used in later tasks
-func sortedTexts(in []string) []string {
-	out := append([]string(nil), in...)
-	sort.Strings(out)
-	return out
 }
 
 // glob returns the live-log glob for a directory.
