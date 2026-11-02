@@ -191,6 +191,35 @@ func fingerprint(f *os.File) ([]byte, error) {
 	return buf[:n], nil
 }
 
+// alignToLineEnd returns the offset just after the last newline at or before
+// size. If there is incomplete data after the last newline, it returns size
+// to skip that data and start fresh at EOF.
+func alignToLineEnd(f *os.File, size int64) int64 {
+	const chunk = 64 * 1024
+	pos := size
+	buf := make([]byte, chunk)
+	for pos > 0 {
+		start := max(pos-chunk, 0)
+		n, err := f.ReadAt(buf[:pos-start], start)
+		if n > 0 {
+			for i := n - 1; i >= 0; i-- {
+				if buf[i] == '\n' {
+					afterNewline := start + int64(i) + 1
+					if afterNewline < size {
+						return size
+					}
+					return afterNewline
+				}
+			}
+		}
+		if err != nil {
+			break
+		}
+		pos = start
+	}
+	return 0
+}
+
 // poll opens new files, reads each tracked file to EOF, then saves offsets.
 func (t *Tailer) poll(initial bool) {
 	t.mu.Lock()
@@ -222,7 +251,7 @@ func (t *Tailer) poll(initial bool) {
 		}
 		st := &fileState{fingerprint: fp, f: f, path: p}
 		if !t.matchSaved(st) && initial && t.firstRun {
-			st.offset = fi.Size()
+			st.offset = alignToLineEnd(f, fi.Size())
 		}
 		t.files[ino] = st
 	}
@@ -261,6 +290,11 @@ func (t *Tailer) read(s *fileState) {
 				}
 				t.emit(s, s.partial[:i], readAt)
 				s.partial = s.partial[i+1:]
+			}
+			if len(s.fingerprint) < fingerprintSize {
+				if fp, err := fingerprint(s.f); err == nil && len(fp) > len(s.fingerprint) {
+					s.fingerprint = fp
+				}
 			}
 		}
 		if readErr != nil {

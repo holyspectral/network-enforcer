@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// startTailer builds and starts a tailer. It stops the tailer at test end.
-func startTailer(t *testing.T, cfg Config, c *collector) {
+// startTailer builds and starts a tailer. It stops the tailer at test end
+// and returns the tailer for test-specific control.
+func startTailer(t *testing.T, cfg Config, c *collector) *Tailer {
 	t.Helper()
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = 50 * time.Millisecond
@@ -19,6 +20,7 @@ func startTailer(t *testing.T, cfg Config, c *collector) {
 	require.NoError(t, err)
 	require.NoError(t, tl.Start(context.Background()))
 	t.Cleanup(func() { _ = tl.Stop() })
+	return tl
 }
 
 func TestTailerStartsAtEnd(t *testing.T) {
@@ -31,7 +33,7 @@ func TestTailerStartsAtEnd(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	appendLines(t, log, 50, 60)
 
-	waitForSet(c, wantTexts(50, 60), 3*time.Second)
+	waitForSet(c, wantTexts(50, 60))
 	got := c.snapshot()
 	require.Equal(t, wantTexts(50, 60), got)
 }
@@ -66,6 +68,52 @@ func TestTailerNoPartialLine(t *testing.T) {
 	require.Empty(t, c.snapshot(), "a partial line was emitted")
 
 	appendRaw(t, log, full[half:])
-	waitForSet(c, wantTexts(100, 101), 3*time.Second)
+	waitForSet(c, wantTexts(100, 101))
 	require.Equal(t, wantTexts(100, 101), c.snapshot())
+}
+
+func TestTailerFirstRunAlignsToLineBoundary(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	// Write one full line, then a half line with no newline.
+	appendLines(t, log, 0, 1)
+	appendRaw(t, log, "2026-10-29T13:00:00.000000000Z stdout F partial-start")
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(300 * time.Millisecond)
+	// Complete the half line, then add a clean line.
+	appendRaw(t, log, "-end\n")
+	appendLines(t, log, 200, 201)
+
+	waitForSet(c, []string{"msg-200"})
+	got := c.snapshot()
+	// The tailer must not emit "partial-start-end": it began after the last
+	// newline, so it dropped the broken head and kept the clean tail.
+	require.NotContains(t, got, "partial-start-end")
+	require.Contains(t, got, "msg-200")
+}
+
+func TestTailerShortFirstLine(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	state := filepath.Join(t.TempDir(), "offsets.json")
+
+	// A first line far shorter than fingerprintSize.
+	appendRaw(t, log, "2026-10-29T13:00:00.000000000Z stdout F x\n")
+	c := &collector{}
+	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c)
+	time.Sleep(300 * time.Millisecond)
+	appendLines(t, log, 0, 20)
+	waitForSet(c, wantTexts(0, 20))
+	require.NoError(t, tl.Stop())
+
+	// A restart resumes with no replay of the short line or the batch.
+	c2 := &collector{}
+	startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c2)
+	appendLines(t, log, 20, 30)
+	waitForSet(c2, wantTexts(20, 30))
+	missing, dup := missingAndDup(c2.snapshot(), wantTexts(20, 30))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
 }

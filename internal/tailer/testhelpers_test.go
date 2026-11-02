@@ -94,9 +94,9 @@ func missingAndDup(got, want []string) (int, int) {
 }
 
 // waitForSet polls until every want line is present, then settles so a late
-// duplicate can still appear.
-func waitForSet(c *collector, want []string, d time.Duration) {
-	deadline := time.Now().Add(d)
+// duplicate can still appear. It uses a fixed timeout of 3 seconds.
+func waitForSet(c *collector, want []string) {
+	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		if missing, _ := missingAndDup(c.snapshot(), want); missing == 0 {
 			break
