@@ -103,7 +103,7 @@ func TestCriJoiner(t *testing.T) {
 					got = append(got, string(out.Text))
 				}
 			}
-			assert.Equal(t, c.wantN, len(got))
+			assert.Len(t, got, c.wantN)
 			assert.Equal(t, c.wantL, got)
 		})
 	}
