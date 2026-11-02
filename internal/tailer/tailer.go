@@ -1,0 +1,284 @@
+package tailer
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"sync"
+	"syscall"
+	"time"
+)
+
+const fingerprintSize = 256
+
+// Line is one complete log line emitted to the handler.
+type Line struct {
+	Path   string
+	Stream string
+	Time   time.Time
+	ReadAt time.Time
+	Text   []byte
+}
+
+// Handler receives one complete line.
+type Handler func(Line)
+
+// Config holds the tailer settings. Only Glob is required.
+type Config struct {
+	Glob           string
+	CheckpointPath string
+	PollInterval   time.Duration
+	MaxLineBytes   int
+	GracePolls     int
+	Retention      time.Duration
+	Logger         *slog.Logger
+}
+
+const (
+	defaultPollInterval = 200 * time.Millisecond
+	defaultMaxLineBytes = 1 << 20
+	defaultGracePolls   = 2
+	defaultRetention    = 10 * time.Minute
+	readBufSize         = 64 * 1024
+)
+
+func (c *Config) applyDefaults() {
+	if c.PollInterval == 0 {
+		c.PollInterval = defaultPollInterval
+	}
+	if c.MaxLineBytes == 0 {
+		c.MaxLineBytes = defaultMaxLineBytes
+	}
+	if c.GracePolls == 0 {
+		c.GracePolls = defaultGracePolls
+	}
+	if c.Retention == 0 {
+		c.Retention = defaultRetention
+	}
+	if c.Logger == nil {
+		c.Logger = slog.Default()
+	}
+}
+
+// fileState holds the runtime state for one tracked file.
+type fileState struct {
+	fingerprint []byte
+	offset      int64
+	f           *os.File
+	path        string
+	partial     []byte
+	joiner      criJoiner
+}
+
+// Tailer reads CRI log files and emits complete lines.
+type Tailer struct {
+	cfg      Config
+	handler  Handler
+	saved    []savedCheckpoint
+	firstRun bool
+
+	mu    sync.Mutex
+	files map[uint64]*fileState
+
+	stop chan struct{}
+	done chan struct{}
+}
+
+// New builds a tailer. It returns an error when Glob is empty.
+func New(cfg Config, h Handler) (*Tailer, error) {
+	if cfg.Glob == "" {
+		return nil, errors.New("tailer: Glob is required")
+	}
+	cfg.applyDefaults()
+	t := &Tailer{
+		cfg:      cfg,
+		handler:  h,
+		files:    map[uint64]*fileState{},
+		firstRun: true,
+		stop:     make(chan struct{}),
+		done:     make(chan struct{}),
+	}
+	if recs, ok := loadCheckpoints(cfg.CheckpointPath); ok {
+		t.saved = recs
+		t.firstRun = false
+	}
+	return t, nil
+}
+
+// Start runs the first poll and then polls on the interval until Stop or the
+// context ends.
+func (t *Tailer) Start(ctx context.Context) error {
+	t.poll(true)
+	go func() {
+		defer close(t.done)
+		tick := time.NewTicker(t.cfg.PollInterval)
+		defer tick.Stop()
+		for {
+			select {
+			case <-t.stop:
+				t.shutdown()
+				return
+			case <-ctx.Done():
+				t.shutdown()
+				return
+			case <-tick.C:
+				t.poll(false)
+			}
+		}
+	}()
+	return nil
+}
+
+// Stop ends the poll loop and waits for it.
+func (t *Tailer) Stop() error {
+	select {
+	case <-t.stop:
+	default:
+		close(t.stop)
+	}
+	<-t.done
+	return nil
+}
+
+func (t *Tailer) shutdown() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if err := t.save(); err != nil {
+		t.cfg.Logger.Error("Could not save checkpoints", "err", err)
+	}
+	for _, s := range t.files {
+		if err := s.f.Close(); err != nil {
+			t.cfg.Logger.Error("Could not close file", "path", s.path, "err", err)
+		}
+	}
+}
+
+func inode(fi os.FileInfo) uint64 {
+	if st, ok := fi.Sys().(*syscall.Stat_t); ok {
+		return st.Ino
+	}
+	return 0
+}
+
+func fingerprint(f *os.File) ([]byte, error) {
+	buf := make([]byte, fingerprintSize)
+	n, err := f.ReadAt(buf, 0)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	return buf[:n], nil
+}
+
+// poll opens new files, reads each tracked file to EOF, then saves offsets.
+func (t *Tailer) poll(initial bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	paths, globErr := filepath.Glob(t.cfg.Glob)
+	if globErr != nil {
+		t.cfg.Logger.Error("Could not glob logs", "glob", t.cfg.Glob, "err", globErr)
+		return
+	}
+	for _, p := range paths {
+		fi, statErr := os.Stat(p)
+		if statErr != nil {
+			continue
+		}
+		ino := inode(fi)
+		if _, ok := t.files[ino]; ok {
+			continue
+		}
+		f, openErr := os.Open(p)
+		if openErr != nil {
+			continue
+		}
+		fp, fpErr := fingerprint(f)
+		if fpErr != nil || len(fp) == 0 {
+			if closeErr := f.Close(); closeErr != nil {
+				t.cfg.Logger.Error("Could not close file", "path", p, "err", closeErr)
+			}
+			continue
+		}
+		st := &fileState{fingerprint: fp, f: f, path: p}
+		if !t.matchSaved(st) && initial && t.firstRun {
+			st.offset = fi.Size()
+		}
+		t.files[ino] = st
+	}
+	for _, s := range t.files {
+		t.read(s)
+	}
+	if saveErr := t.save(); saveErr != nil {
+		t.cfg.Logger.Error("Could not save checkpoints", "err", saveErr)
+	}
+}
+
+func (t *Tailer) matchSaved(st *fileState) bool {
+	for _, sv := range t.saved {
+		n := len(sv.Fingerprint)
+		if n > 0 && len(st.fingerprint) >= n && bytes.Equal(st.fingerprint[:n], sv.Fingerprint) {
+			st.offset = sv.Offset
+			return true
+		}
+	}
+	return false
+}
+
+// read reads one file to EOF and emits each complete line.
+func (t *Tailer) read(s *fileState) {
+	buf := make([]byte, readBufSize)
+	for {
+		n, readErr := s.f.ReadAt(buf, s.offset)
+		if n > 0 {
+			readAt := time.Now()
+			s.offset += int64(n)
+			s.partial = append(s.partial, buf[:n]...)
+			for {
+				i := bytes.IndexByte(s.partial, '\n')
+				if i < 0 {
+					break
+				}
+				t.emit(s, s.partial[:i], readAt)
+				s.partial = s.partial[i+1:]
+			}
+		}
+		if readErr != nil {
+			break
+		}
+	}
+}
+
+// emit parses one raw line and sends a complete record to the handler.
+func (t *Tailer) emit(s *fileState, raw []byte, readAt time.Time) {
+	rec, err := parseCRI(raw)
+	if err != nil {
+		t.cfg.Logger.Warn("Could not parse CRI line", "path", s.path, "err", err)
+		return
+	}
+	out, ok := s.joiner.add(rec)
+	if !ok {
+		return
+	}
+	t.handler(Line{
+		Path:   s.path,
+		Stream: out.Stream,
+		Time:   out.Time,
+		ReadAt: readAt,
+		Text:   out.Text,
+	})
+}
+
+// save writes the offset of the last complete line for each file.
+func (t *Tailer) save() error {
+	out := make([]savedCheckpoint, 0, len(t.files))
+	for _, s := range t.files {
+		out = append(out, savedCheckpoint{
+			Fingerprint: s.fingerprint,
+			Offset:      s.offset - int64(len(s.partial)),
+		})
+	}
+	return saveCheckpoints(t.cfg.CheckpointPath, out)
+}
