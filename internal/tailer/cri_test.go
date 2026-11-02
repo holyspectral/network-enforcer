@@ -69,3 +69,42 @@ func TestParseCRI(t *testing.T) {
 		})
 	}
 }
+
+func TestCriJoiner(t *testing.T) {
+	cases := []struct {
+		name  string
+		recs  []criRecord
+		wantN int
+		wantL []string
+	}{
+		{
+			name:  "single full line",
+			recs:  []criRecord{{Stream: "stdout", Text: []byte("abc")}},
+			wantN: 1,
+			wantL: []string{"abc"},
+		},
+		{
+			name: "two partials then full",
+			recs: []criRecord{
+				{Stream: "stdout", Partial: true, Text: []byte("ab")},
+				{Stream: "stdout", Partial: true, Text: []byte("cd")},
+				{Stream: "stdout", Partial: false, Text: []byte("ef")},
+			},
+			wantN: 1,
+			wantL: []string{"abcdef"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var j criJoiner
+			var got []string
+			for _, r := range c.recs {
+				if out, ok := j.add(r); ok {
+					got = append(got, string(out.Text))
+				}
+			}
+			assert.Equal(t, c.wantN, len(got))
+			assert.Equal(t, c.wantL, got)
+		})
+	}
+}

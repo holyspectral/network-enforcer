@@ -54,3 +54,30 @@ func parseCRI(line []byte) (criRecord, error) {
 	}
 	return criRecord{Time: t, Stream: string(stream), Partial: partial, Text: content}, nil
 }
+
+// criJoiner joins partial CRI records into one line. It keeps the time and the
+// stream of the first record in the group.
+type criJoiner struct {
+	buf    []byte
+	time   time.Time
+	stream string
+	open   bool
+}
+
+// add takes one record. It returns the joined record and true when the line is
+// complete. It returns false while the line is still partial.
+func (j *criJoiner) add(rec criRecord) (criRecord, bool) {
+	if !j.open {
+		j.time = rec.Time
+		j.stream = rec.Stream
+		j.buf = j.buf[:0]
+	}
+	j.buf = append(j.buf, rec.Text...)
+	if rec.Partial {
+		j.open = true
+		return criRecord{}, false
+	}
+	j.open = false
+	out := criRecord{Time: j.time, Stream: j.stream, Text: append([]byte(nil), j.buf...)}
+	return out, true
+}
