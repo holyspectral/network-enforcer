@@ -5,12 +5,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // savedCheckpoint is one offset record on disk.
 type savedCheckpoint struct {
-	Fingerprint []byte `json:"fingerprint"`
-	Offset      int64  `json:"offset"`
+	Fingerprint []byte    `json:"fingerprint"`
+	Offset      int64     `json:"offset"`
+	LastSeen    time.Time `json:"lastSeen"`
 }
 
 // loadCheckpoints reads the offset file. It returns false when the file is

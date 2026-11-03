@@ -400,6 +400,20 @@ func headMatches(cur, saved []byte) bool {
 	return bytes.Equal(cur[:n], saved)
 }
 
+// isLiveFingerprint reports whether fp identifies one of the currently
+// tracked files. A fingerprint grows as its file grows (see consume), so a
+// saved fingerprint from an earlier, shorter snapshot of a still-tracked
+// file no longer equals the current one byte-for-byte; headMatches checks
+// the prefix relationship in either direction instead.
+func isLiveFingerprint(fp []byte, files map[uint64]*fileState) bool {
+	for _, s := range files {
+		if headMatches(s.fingerprint, fp) || headMatches(fp, s.fingerprint) {
+			return true
+		}
+	}
+	return false
+}
+
 // emit parses one raw line and sends a complete record to the handler.
 func (t *Tailer) emit(s *fileState, raw []byte, readAt time.Time) {
 	rec, err := parseCRI(raw)
@@ -422,12 +436,27 @@ func (t *Tailer) emit(s *fileState, raw []byte, readAt time.Time) {
 
 // save writes the offset of the last complete line for each file.
 func (t *Tailer) save() error {
+	now := time.Now()
 	out := make([]savedCheckpoint, 0, len(t.files))
 	for _, s := range t.files {
 		out = append(out, savedCheckpoint{
 			Fingerprint: s.fingerprint,
 			Offset:      s.offset - int64(len(s.partial)),
+			LastSeen:    now,
 		})
 	}
-	return saveCheckpoints(t.cfg.CheckpointPath, out)
+	for _, sv := range t.saved {
+		if isLiveFingerprint(sv.Fingerprint, t.files) {
+			continue
+		}
+		if !sv.LastSeen.IsZero() && now.Sub(sv.LastSeen) > t.cfg.Retention {
+			continue
+		}
+		out = append(out, sv)
+	}
+	if err := saveCheckpoints(t.cfg.CheckpointPath, out); err != nil {
+		return err
+	}
+	t.saved = out
+	return nil
 }

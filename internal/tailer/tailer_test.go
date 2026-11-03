@@ -414,7 +414,7 @@ func TestTailerStopSavesAndCloses(t *testing.T) {
 	recs, ok := loadCheckpoints(state)
 	require.True(t, ok)
 	require.Len(t, recs, 1)
-	require.Greater(t, recs[0].Offset, int64(0))
+	require.Positive(t, recs[0].Offset)
 
 	// A second Stop is safe.
 	require.NoError(t, tl.Stop())
@@ -434,15 +434,15 @@ func TestTailerRotationUnderLoad(t *testing.T) {
 	rotateEvery := 400
 	next := 1
 	for next < total {
-		end := next + 50
-		if end > total {
-			end = total
-		}
+		end := min(next+50, total)
 		appendLines(t, log, next, end)
 		next = end
 		if next%rotateEvery == 0 {
 			ts := time.Now().UnixNano()
-			require.NoError(t, os.Rename(log, filepath.Join(dir, "0.log."+time.Unix(0, ts).Format("20060102-150405.000000000"))))
+			require.NoError(
+				t,
+				os.Rename(log, filepath.Join(dir, "0.log."+time.Unix(0, ts).Format("20060102-150405.000000000"))),
+			)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -451,4 +451,38 @@ func TestTailerRotationUnderLoad(t *testing.T) {
 	missing, dup := missingAndDup(c.snapshot(), wantTexts(1, total))
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
+}
+
+func TestTailerPrunesOldCheckpoints(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(t.TempDir(), "offsets.json")
+
+	// Seed the offset file with one fresh and one stale record.
+	fresh := savedCheckpoint{Fingerprint: []byte("fresh"), Offset: 5, LastSeen: time.Now()}
+	stale := savedCheckpoint{Fingerprint: []byte("stale"), Offset: 9, LastSeen: time.Now().Add(-time.Hour)}
+	require.NoError(t, saveCheckpoints(state, []savedCheckpoint{fresh, stale}))
+
+	// Start a tailer with no matching files and a short retention. After one
+	// save, the stale record is gone and the fresh record is kept.
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 5)
+	c := &collector{}
+	cfg := Config{
+		Glob:           glob(dir),
+		CheckpointPath: state,
+		PollInterval:   50 * time.Millisecond,
+		Retention:      10 * time.Minute,
+	}
+	tl := startTailer(t, cfg, c)
+	time.Sleep(200 * time.Millisecond)
+	require.NoError(t, tl.Stop())
+
+	recs, ok := loadCheckpoints(state)
+	require.True(t, ok)
+	var fingerprints []string
+	for _, r := range recs {
+		fingerprints = append(fingerprints, string(r.Fingerprint))
+	}
+	require.Contains(t, fingerprints, "fresh")
+	require.NotContains(t, fingerprints, "stale")
 }
