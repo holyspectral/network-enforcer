@@ -376,3 +376,23 @@ func TestTailerDropsOversizeLine(t *testing.T) {
 		require.LessOrEqual(t, len(g), 128, "an oversize line was emitted")
 	}
 }
+
+func TestTailerIsolatesPerFileErrors(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("permission test is meaningless as root")
+	}
+	dir := t.TempDir()
+	good := filepath.Join(dir, "0.log")
+	bad := filepath.Join(dir, "1.log")
+	appendLines(t, good, 0, 1)
+	require.NoError(t, os.WriteFile(bad, []byte("x\n"), 0o000))
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(200 * time.Millisecond)
+	appendLines(t, good, 1, 11)
+
+	waitForSet(c, wantTexts(1, 11), 3*time.Second)
+	missing, _ := missingAndDup(c.snapshot(), wantTexts(1, 11))
+	require.Equal(t, 0, missing, "an unreadable sibling blocked the good file")
+}
