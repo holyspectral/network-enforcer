@@ -2,6 +2,7 @@ package tailer
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestTailerStartsAtEnd(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	appendLines(t, log, 50, 60)
 
-	waitForSet(c, wantTexts(50, 60))
+	waitForSet(c, wantTexts(50, 60), 3*time.Second)
 	got := c.snapshot()
 	require.Equal(t, wantTexts(50, 60), got)
 }
@@ -68,7 +69,7 @@ func TestTailerNoPartialLine(t *testing.T) {
 	require.Empty(t, c.snapshot(), "a partial line was emitted")
 
 	appendRaw(t, log, full[half:])
-	waitForSet(c, wantTexts(100, 101))
+	waitForSet(c, wantTexts(100, 101), 3*time.Second)
 	require.Equal(t, wantTexts(100, 101), c.snapshot())
 }
 
@@ -86,7 +87,7 @@ func TestTailerFirstRunAlignsToLineBoundary(t *testing.T) {
 	appendRaw(t, log, "-end\n")
 	appendLines(t, log, 200, 201)
 
-	waitForSet(c, []string{"msg-200"})
+	waitForSet(c, []string{"msg-200"}, 3*time.Second)
 	got := c.snapshot()
 	// The tailer must not emit "partial-start-end": it began after the last
 	// newline, so it dropped the broken head and kept the clean tail.
@@ -105,14 +106,14 @@ func TestTailerShortFirstLine(t *testing.T) {
 	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c)
 	time.Sleep(300 * time.Millisecond)
 	appendLines(t, log, 0, 20)
-	waitForSet(c, wantTexts(0, 20))
+	waitForSet(c, wantTexts(0, 20), 3*time.Second)
 	require.NoError(t, tl.Stop())
 
 	// A restart resumes with no replay of the short line or the batch.
 	c2 := &collector{}
 	startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c2)
 	appendLines(t, log, 20, 30)
-	waitForSet(c2, wantTexts(20, 30))
+	waitForSet(c2, wantTexts(20, 30), 3*time.Second)
 	missing, dup := missingAndDup(c2.snapshot(), wantTexts(20, 30))
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
@@ -128,7 +129,7 @@ func TestTailerRestartResumesFromSavedOffset(t *testing.T) {
 	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c1)
 	time.Sleep(200 * time.Millisecond)
 	appendLines(t, log, 1, 51)
-	waitForSet(c1, wantTexts(1, 51))
+	waitForSet(c1, wantTexts(1, 51), 3*time.Second)
 	require.NoError(t, tl.Stop())
 
 	// Lines written while the agent is down.
@@ -136,7 +137,7 @@ func TestTailerRestartResumesFromSavedOffset(t *testing.T) {
 
 	c2 := &collector{}
 	startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c2)
-	waitForSet(c2, wantTexts(51, 101))
+	waitForSet(c2, wantTexts(51, 101), 3*time.Second)
 	got := c2.snapshot()
 	missing, dup := missingAndDup(got, wantTexts(51, 101))
 	require.Equal(t, 0, missing)
@@ -145,4 +146,24 @@ func TestTailerRestartResumesFromSavedOffset(t *testing.T) {
 	for _, old := range wantTexts(0, 51) {
 		require.NotContains(t, got, old)
 	}
+}
+
+func TestTailerRenameRotationNoLoss(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(200 * time.Millisecond)
+
+	appendLines(t, log, 1, 101)
+	// Rotate by rename, then the runtime writes a new 0.log.
+	require.NoError(t, os.Rename(log, filepath.Join(dir, "0.log.20261029-130000")))
+	appendLines(t, log, 101, 201)
+
+	waitForSet(c, wantTexts(1, 201), 5*time.Second)
+	missing, dup := missingAndDup(c.snapshot(), wantTexts(1, 201))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
 }

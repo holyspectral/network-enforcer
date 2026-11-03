@@ -229,37 +229,67 @@ func (t *Tailer) poll(initial bool) {
 		t.cfg.Logger.Error("Could not glob logs", "glob", t.cfg.Glob, "err", globErr)
 		return
 	}
+	present := t.openNewFiles(paths, initial)
+	for _, s := range t.files {
+		t.read(s)
+	}
+	t.pruneAbsent(present)
+	if saveErr := t.save(); saveErr != nil {
+		t.cfg.Logger.Error("Could not save checkpoints", "err", saveErr)
+	}
+}
+
+// openNewFiles stats every glob match, opens files not yet tracked, and
+// returns the set of inodes currently present on disk.
+func (t *Tailer) openNewFiles(paths []string, initial bool) map[uint64]bool {
+	present := map[uint64]bool{}
 	for _, p := range paths {
 		fi, statErr := os.Stat(p)
 		if statErr != nil {
 			continue
 		}
 		ino := inode(fi)
+		present[ino] = true
 		if _, ok := t.files[ino]; ok {
 			continue
 		}
-		f, openErr := os.Open(p)
-		if openErr != nil {
+		t.openFile(p, fi, ino, initial)
+	}
+	return present
+}
+
+// openFile opens one newly seen path and adds it to the tracked files.
+func (t *Tailer) openFile(p string, fi os.FileInfo, ino uint64, initial bool) {
+	f, openErr := os.Open(p)
+	if openErr != nil {
+		return
+	}
+	fp, fpErr := fingerprint(f)
+	if fpErr != nil || len(fp) == 0 {
+		if closeErr := f.Close(); closeErr != nil {
+			t.cfg.Logger.Error("Could not close file", "path", p, "err", closeErr)
+		}
+		return
+	}
+	st := &fileState{fingerprint: fp, f: f, path: p}
+	if !t.matchSaved(st) && initial && t.firstRun {
+		st.offset = alignToLineEnd(f, fi.Size())
+	}
+	t.files[ino] = st
+}
+
+// pruneAbsent closes and drops every tracked file whose inode is not in
+// present. A renamed or removed file is absent from the live glob, and the
+// caller has already drained it with a final read before calling this.
+func (t *Tailer) pruneAbsent(present map[uint64]bool) {
+	for ino, s := range t.files {
+		if present[ino] {
 			continue
 		}
-		fp, fpErr := fingerprint(f)
-		if fpErr != nil || len(fp) == 0 {
-			if closeErr := f.Close(); closeErr != nil {
-				t.cfg.Logger.Error("Could not close file", "path", p, "err", closeErr)
-			}
-			continue
+		if err := s.f.Close(); err != nil {
+			t.cfg.Logger.Error("Could not close file", "path", s.path, "err", err)
 		}
-		st := &fileState{fingerprint: fp, f: f, path: p}
-		if !t.matchSaved(st) && initial && t.firstRun {
-			st.offset = alignToLineEnd(f, fi.Size())
-		}
-		t.files[ino] = st
-	}
-	for _, s := range t.files {
-		t.read(s)
-	}
-	if saveErr := t.save(); saveErr != nil {
-		t.cfg.Logger.Error("Could not save checkpoints", "err", saveErr)
+		delete(t.files, ino)
 	}
 }
 
