@@ -326,3 +326,27 @@ func TestTailerInodeReuseReadsFromStart(t *testing.T) {
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
 }
+
+func TestTailerIgnoresCompressedAndTempFiles(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+	// Pre-existing rotated artifacts that must never be read.
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "0.log.20261029-120000.gz"),
+		[]byte("2026-10-29T12:00:00.000000000Z stdout F should-not-read-gz\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "0.log.20261029-120001.tmp"),
+		[]byte("2026-10-29T12:00:00.000000000Z stdout F should-not-read-tmp\n"), 0o600))
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(300 * time.Millisecond)
+	appendLines(t, log, 1, 11)
+	waitForSet(c, wantTexts(1, 11), 3*time.Second)
+
+	got := c.snapshot()
+	require.NotContains(t, got, "should-not-read-gz")
+	require.NotContains(t, got, "should-not-read-tmp")
+	missing, dup := missingAndDup(got, wantTexts(1, 11))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+}
