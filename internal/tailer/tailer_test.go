@@ -117,3 +117,32 @@ func TestTailerShortFirstLine(t *testing.T) {
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
 }
+
+func TestTailerRestartResumesFromSavedOffset(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(t.TempDir(), "offsets.json")
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c1 := &collector{}
+	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c1)
+	time.Sleep(200 * time.Millisecond)
+	appendLines(t, log, 1, 51)
+	waitForSet(c1, wantTexts(1, 51))
+	require.NoError(t, tl.Stop())
+
+	// Lines written while the agent is down.
+	appendLines(t, log, 51, 101)
+
+	c2 := &collector{}
+	startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c2)
+	waitForSet(c2, wantTexts(51, 101))
+	got := c2.snapshot()
+	missing, dup := missingAndDup(got, wantTexts(51, 101))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+	// No replay of the first run's lines.
+	for _, old := range wantTexts(0, 51) {
+		require.NotContains(t, got, old)
+	}
+}
