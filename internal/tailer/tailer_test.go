@@ -277,3 +277,52 @@ func TestTailerPodDeletionDrainsOpenFile(t *testing.T) {
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
 }
+
+func TestTailerKeepsStateDuringBriefAbsence(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	cfg := Config{Glob: glob(dir), PollInterval: 50 * time.Millisecond, GracePolls: 3}
+	startTailer(t, cfg, c)
+	time.Sleep(150 * time.Millisecond)
+	appendLines(t, log, 1, 11)
+	waitForSet(c, wantTexts(1, 11), 2*time.Second)
+
+	// Move the file out of the glob for one poll, then move it back with the
+	// same inode and append more lines. No line is replayed or lost.
+	hidden := filepath.Join(dir, "0.hidden")
+	require.NoError(t, os.Rename(log, hidden))
+	time.Sleep(60 * time.Millisecond)
+	require.NoError(t, os.Rename(hidden, log))
+	appendLines(t, log, 11, 21)
+
+	waitForSet(c, wantTexts(11, 21), 3*time.Second)
+	missing, dup := missingAndDup(c.snapshot(), wantTexts(1, 21))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+}
+
+func TestTailerInodeReuseReadsFromStart(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	cfg := Config{Glob: glob(dir), PollInterval: 50 * time.Millisecond, GracePolls: 1}
+	startTailer(t, cfg, c)
+	time.Sleep(150 * time.Millisecond)
+	appendLines(t, log, 1, 11)
+	waitForSet(c, wantTexts(1, 11), 2*time.Second)
+
+	// Remove the file and wait past the grace period so it is pruned.
+	require.NoError(t, os.Remove(log))
+	time.Sleep(300 * time.Millisecond)
+	// A new file appears. It may reuse the inode. It must read from the start.
+	appendLines(t, log, 100, 110)
+	waitForSet(c, wantTexts(100, 110), 3*time.Second)
+	missing, dup := missingAndDup(c.snapshot(), append(wantTexts(1, 11), wantTexts(100, 110)...))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+}

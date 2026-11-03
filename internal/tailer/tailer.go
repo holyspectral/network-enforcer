@@ -72,6 +72,7 @@ type fileState struct {
 	path        string
 	partial     []byte
 	joiner      criJoiner
+	missing     int
 }
 
 // Tailer reads CRI log files and emits complete lines.
@@ -279,17 +280,24 @@ func (t *Tailer) openFile(p string, fi os.FileInfo, ino uint64, initial bool) {
 }
 
 // pruneAbsent closes and drops every tracked file whose inode is not in
-// present. A renamed or removed file is absent from the live glob, and the
-// caller has already drained it with a final read before calling this.
+// present, after GracePolls consecutive absent polls. A renamed or removed
+// file is absent from the live glob, and the caller has already drained it
+// with a read in this poll before calling this. The grace period covers a
+// transient stat failure or a brief rename window so a reappearing file is
+// not mistaken for a new one.
 func (t *Tailer) pruneAbsent(present map[uint64]bool) {
 	for ino, s := range t.files {
 		if present[ino] {
+			s.missing = 0
 			continue
 		}
-		if err := s.f.Close(); err != nil {
-			t.cfg.Logger.Error("Could not close file", "path", s.path, "err", err)
+		s.missing++
+		if s.missing >= t.cfg.GracePolls {
+			if err := s.f.Close(); err != nil {
+				t.cfg.Logger.Error("Could not close file", "path", s.path, "err", err)
+			}
+			delete(t.files, ino)
 		}
-		delete(t.files, ino)
 	}
 }
 
