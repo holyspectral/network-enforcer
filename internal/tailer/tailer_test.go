@@ -240,3 +240,40 @@ func TestTailerRestartAfterCopyTruncate(t *testing.T) {
 		require.NotContains(t, got, old)
 	}
 }
+
+func TestTailerContainerRestartNoLoss(t *testing.T) {
+	dir := t.TempDir()
+	log0 := filepath.Join(dir, "0.log")
+	appendLines(t, log0, 0, 1)
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(200 * time.Millisecond)
+
+	appendLines(t, log0, 1, 101)
+	log1 := filepath.Join(dir, "1.log")
+	appendLines(t, log1, 101, 201)
+
+	waitForSet(c, wantTexts(1, 201), 5*time.Second)
+	missing, dup := missingAndDup(c.snapshot(), wantTexts(1, 201))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+}
+
+func TestTailerPodDeletionDrainsOpenFile(t *testing.T) {
+	dir := t.TempDir()
+	log0 := filepath.Join(dir, "0.log")
+	appendLines(t, log0, 0, 1)
+
+	c := &collector{}
+	startTailer(t, Config{Glob: glob(dir)}, c)
+	time.Sleep(200 * time.Millisecond)
+
+	appendLines(t, log0, 1, 101)
+	require.NoError(t, os.Remove(log0))
+
+	waitForSet(c, wantTexts(1, 101), 5*time.Second)
+	missing, dup := missingAndDup(c.snapshot(), wantTexts(1, 101))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+}
