@@ -210,3 +210,33 @@ func TestTailerCopyTruncate(t *testing.T) {
 		})
 	}
 }
+
+func TestTailerRestartAfterCopyTruncate(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(t.TempDir(), "offsets.json")
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c1 := &collector{}
+	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c1)
+	time.Sleep(200 * time.Millisecond)
+	appendLines(t, log, 1, 51)
+	waitForSet(c1, wantTexts(1, 51), 3*time.Second)
+	require.NoError(t, os.Truncate(log, 0))
+	time.Sleep(150 * time.Millisecond)
+	appendLines(t, log, 51, 101)
+	waitForSet(c1, wantTexts(51, 101), 3*time.Second)
+	require.NoError(t, tl.Stop())
+
+	appendLines(t, log, 101, 151)
+	c2 := &collector{}
+	startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c2)
+	waitForSet(c2, wantTexts(101, 151), 3*time.Second)
+	got := c2.snapshot()
+	missing, dup := missingAndDup(got, wantTexts(101, 151))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+	for _, old := range wantTexts(1, 101) {
+		require.NotContains(t, got, old)
+	}
+}
