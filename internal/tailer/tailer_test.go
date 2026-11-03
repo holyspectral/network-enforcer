@@ -419,3 +419,36 @@ func TestTailerStopSavesAndCloses(t *testing.T) {
 	// A second Stop is safe.
 	require.NoError(t, tl.Stop())
 }
+
+func TestTailerRotationUnderLoad(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	cfg := Config{Glob: glob(dir), PollInterval: 30 * time.Millisecond}
+	startTailer(t, cfg, c)
+	time.Sleep(100 * time.Millisecond)
+
+	const total = 2000
+	rotateEvery := 400
+	next := 1
+	for next < total {
+		end := next + 50
+		if end > total {
+			end = total
+		}
+		appendLines(t, log, next, end)
+		next = end
+		if next%rotateEvery == 0 {
+			ts := time.Now().UnixNano()
+			require.NoError(t, os.Rename(log, filepath.Join(dir, "0.log."+time.Unix(0, ts).Format("20060102-150405.000000000"))))
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	waitForSet(c, wantTexts(1, total), 8*time.Second)
+	missing, dup := missingAndDup(c.snapshot(), wantTexts(1, total))
+	require.Equal(t, 0, missing)
+	require.Equal(t, 0, dup)
+}
