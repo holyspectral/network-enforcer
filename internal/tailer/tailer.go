@@ -78,6 +78,7 @@ type fileState struct {
 	path        string
 	partial     []byte
 	joiner      criJoiner
+	joinerStart int64
 	missing     int
 }
 
@@ -356,10 +357,11 @@ func (t *Tailer) consume(s *fileState, chunk []byte) {
 		if i < 0 {
 			break
 		}
+		lineStart := s.offset - int64(len(s.partial))
 		if i > t.cfg.MaxLineBytes {
 			t.cfg.Logger.Warn("Dropped oversize log line", "path", s.path, "bytes", i)
 		} else {
-			t.emit(s, s.partial[:i], readAt)
+			t.emit(s, s.partial[:i], lineStart, readAt)
 		}
 		s.partial = s.partial[i+1:]
 	}
@@ -392,6 +394,7 @@ func (t *Tailer) resetTruncated(s *fileState) {
 	s.offset = 0
 	s.partial = nil
 	s.joiner = criJoiner{}
+	s.joinerStart = 0
 	if fp, err := fingerprint(s.f); err == nil {
 		s.fingerprint = fp
 	}
@@ -421,11 +424,14 @@ func isLiveFingerprint(fp []byte, files map[uint64]*fileState) bool {
 }
 
 // emit parses one raw line and sends a complete record to the handler.
-func (t *Tailer) emit(s *fileState, raw []byte, readAt time.Time) {
+func (t *Tailer) emit(s *fileState, raw []byte, lineStart int64, readAt time.Time) {
 	rec, err := parseCRI(raw)
 	if err != nil {
 		t.cfg.Logger.Warn("Could not parse CRI line", "path", s.path, "err", err)
 		return
+	}
+	if !s.joiner.open {
+		s.joinerStart = lineStart
 	}
 	out, ok := s.joiner.add(rec)
 	if !ok {
@@ -445,9 +451,13 @@ func (t *Tailer) save() error {
 	now := time.Now()
 	out := make([]savedCheckpoint, 0, len(t.files))
 	for _, s := range t.files {
+		off := s.offset - int64(len(s.partial))
+		if s.joiner.open {
+			off = s.joinerStart
+		}
 		out = append(out, savedCheckpoint{
 			Fingerprint: s.fingerprint,
-			Offset:      s.offset - int64(len(s.partial)),
+			Offset:      off,
 			LastSeen:    now,
 		})
 	}

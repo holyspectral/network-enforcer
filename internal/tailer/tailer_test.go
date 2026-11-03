@@ -486,3 +486,48 @@ func TestTailerPrunesOldCheckpoints(t *testing.T) {
 	require.Contains(t, fingerprints, "fresh")
 	require.NotContains(t, fingerprints, "stale")
 }
+
+func TestTailerResumesAcrossSplitLineRestart(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(t.TempDir(), "offsets.json")
+	log := filepath.Join(dir, "0.log")
+
+	// A dummy line present before the first run so first-run alignment
+	// starts right after it (see TestTailerFirstRunAlignsToLineBoundary).
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state, PollInterval: 50 * time.Millisecond}, c)
+	time.Sleep(100 * time.Millisecond)
+
+	// Only the P half of a split line arrives while the tailer runs, then
+	// the tailer stops (flushing a checkpoint) before the F half appears.
+	appendRaw(t, log, "2026-10-29T13:00:00.000000000Z stdout P split-part1-\n")
+	time.Sleep(150 * time.Millisecond)
+	require.NoError(t, tl.Stop())
+
+	// Nothing partial was emitted before the F half arrives.
+	for _, g := range c.snapshot() {
+		require.NotEqual(t, "split-part1-", g, "a partial line was emitted")
+	}
+
+	// A fresh tailer resumes from the checkpoint; the F half now arrives.
+	c2 := &collector{}
+	tl2 := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state, PollInterval: 50 * time.Millisecond}, c2)
+	time.Sleep(150 * time.Millisecond)
+	appendRaw(t, log, "2026-10-29T13:00:00.000000000Z stdout F split-part2\n")
+	waitForSet(c2, []string{"split-part1-split-part2"}, 3*time.Second)
+	require.NoError(t, tl2.Stop())
+
+	got := c2.snapshot()
+	require.Contains(t, got, "split-part1-split-part2")
+	// The joined line appears exactly once and no partial remnant appears.
+	n := 0
+	for _, g := range got {
+		if g == "split-part1-split-part2" {
+			n++
+		}
+		require.NotEqual(t, "split-part2", g, "only the F remainder was emitted (P content lost)")
+	}
+	require.Equal(t, 1, n)
+}
