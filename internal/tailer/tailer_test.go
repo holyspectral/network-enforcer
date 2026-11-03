@@ -396,3 +396,26 @@ func TestTailerIsolatesPerFileErrors(t *testing.T) {
 	missing, _ := missingAndDup(c.snapshot(), wantTexts(1, 11))
 	require.Equal(t, 0, missing, "an unreadable sibling blocked the good file")
 }
+
+func TestTailerStopSavesAndCloses(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(t.TempDir(), "offsets.json")
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	tl := startTailer(t, Config{Glob: glob(dir), CheckpointPath: state}, c)
+	time.Sleep(200 * time.Millisecond)
+	appendLines(t, log, 1, 11)
+	waitForSet(c, wantTexts(1, 11), 3*time.Second)
+	require.NoError(t, tl.Stop())
+
+	// The checkpoint file exists and holds one record with a non-zero offset.
+	recs, ok := loadCheckpoints(state)
+	require.True(t, ok)
+	require.Len(t, recs, 1)
+	require.Greater(t, recs[0].Offset, int64(0))
+
+	// A second Stop is safe.
+	require.NoError(t, tl.Stop())
+}
