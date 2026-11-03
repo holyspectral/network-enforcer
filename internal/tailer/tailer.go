@@ -1,3 +1,9 @@
+// Package tailer tails CRI container log files.
+// It joins partial ("P") CRI records into complete lines.
+// It aligns the first read to a line boundary.
+// It survives log rotation by rename and by copytruncate.
+// It checkpoints file offsets to disk and resumes after a restart.
+// It emits each complete line to a handler.
 package tailer
 
 import (

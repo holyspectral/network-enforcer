@@ -296,8 +296,8 @@ removes the oldest first. It compresses each older rotated file to `.gz` through
 a `.tmp` file, but it leaves the newest rotated file uncompressed so a reader can
 finish it.
 
-The prototype does not cover these items. The implementation must add them
-before release:
+The prototype did not cover these items. The `internal/tailer` package now
+covers all of them.
 
 - Close descriptors of rotated files after they are fully read. The prototype
   closes a descriptor only when the file is gone, not when it is fully read.

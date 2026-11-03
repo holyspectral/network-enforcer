@@ -1,4 +1,3 @@
-// Package tailer reads containerd CRI container logs and emits complete lines.
 package tailer
 
 import (
