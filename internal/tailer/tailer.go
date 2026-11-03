@@ -336,12 +336,25 @@ func (t *Tailer) consume(s *fileState, chunk []byte) {
 	readAt := time.Now()
 	s.offset += int64(len(chunk))
 	s.partial = append(s.partial, chunk...)
+	if len(s.partial) > t.cfg.MaxLineBytes {
+		if i := bytes.IndexByte(s.partial, '\n'); i < 0 {
+			// No newline yet. Drop the head but keep the last MaxLineBytes
+			// so a newline that arrives soon still frames a bounded line.
+			drop := len(s.partial) - t.cfg.MaxLineBytes
+			s.partial = s.partial[drop:]
+			t.cfg.Logger.Warn("Dropped oversize log head", "path", s.path, "bytes", drop)
+		}
+	}
 	for {
 		i := bytes.IndexByte(s.partial, '\n')
 		if i < 0 {
 			break
 		}
-		t.emit(s, s.partial[:i], readAt)
+		if i > t.cfg.MaxLineBytes {
+			t.cfg.Logger.Warn("Dropped oversize log line", "path", s.path, "bytes", i)
+		} else {
+			t.emit(s, s.partial[:i], readAt)
+		}
 		s.partial = s.partial[i+1:]
 	}
 	if len(s.fingerprint) < fingerprintSize {

@@ -350,3 +350,29 @@ func TestTailerIgnoresCompressedAndTempFiles(t *testing.T) {
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
 }
+
+func TestTailerDropsOversizeLine(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "0.log")
+	appendLines(t, log, 0, 1)
+
+	c := &collector{}
+	cfg := Config{Glob: glob(dir), MaxLineBytes: 128, PollInterval: 50 * time.Millisecond}
+	startTailer(t, cfg, c)
+	time.Sleep(150 * time.Millisecond)
+
+	// One oversize line, then a normal line.
+	big := "2026-10-29T13:00:00.000000000Z stdout F "
+	for len(big) < 500 {
+		big += "A"
+	}
+	appendRaw(t, log, big+"\n")
+	appendLines(t, log, 200, 201)
+
+	waitForSet(c, []string{"msg-200"}, 3*time.Second)
+	got := c.snapshot()
+	require.Contains(t, got, "msg-200")
+	for _, g := range got {
+		require.LessOrEqual(t, len(g), 128, "an oversize line was emitted")
+	}
+}
