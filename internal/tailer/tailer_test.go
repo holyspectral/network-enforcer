@@ -167,3 +167,46 @@ func TestTailerRenameRotationNoLoss(t *testing.T) {
 	require.Equal(t, 0, missing)
 	require.Equal(t, 0, dup)
 }
+
+func TestTailerCopyTruncate(t *testing.T) {
+	cases := []struct {
+		name   string
+		regrow bool
+	}{
+		{name: "truncate to zero then grow", regrow: false},
+		{name: "truncate and regrow past old offset between polls", regrow: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			log := filepath.Join(dir, "0.log")
+			appendLines(t, log, 0, 1)
+
+			c := &collector{}
+			cfg := Config{Glob: glob(dir), PollInterval: 50 * time.Millisecond}
+			startTailer(t, cfg, c)
+			time.Sleep(150 * time.Millisecond)
+
+			appendLines(t, log, 1, 101)
+			waitForSet(c, wantTexts(1, 101), 3*time.Second)
+
+			require.NoError(t, os.Truncate(log, 0))
+			if tc.regrow {
+				// Regrow past the old offset within one poll window.
+				appendLines(t, log, 101, 301)
+			} else {
+				time.Sleep(100 * time.Millisecond)
+				appendLines(t, log, 101, 201)
+			}
+
+			end := 201
+			if tc.regrow {
+				end = 301
+			}
+			waitForSet(c, wantTexts(101, end), 4*time.Second)
+			missing, dup := missingAndDup(c.snapshot(), wantTexts(1, end))
+			require.Equal(t, 0, missing)
+			require.Equal(t, 0, dup)
+		})
+	}
+}

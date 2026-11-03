@@ -306,31 +306,77 @@ func (t *Tailer) matchSaved(st *fileState) bool {
 
 // read reads one file to EOF and emits each complete line.
 func (t *Tailer) read(s *fileState) {
+	if !t.checkTruncation(s) {
+		return
+	}
+
 	buf := make([]byte, readBufSize)
 	for {
 		n, readErr := s.f.ReadAt(buf, s.offset)
 		if n > 0 {
-			readAt := time.Now()
-			s.offset += int64(n)
-			s.partial = append(s.partial, buf[:n]...)
-			for {
-				i := bytes.IndexByte(s.partial, '\n')
-				if i < 0 {
-					break
-				}
-				t.emit(s, s.partial[:i], readAt)
-				s.partial = s.partial[i+1:]
-			}
-			if len(s.fingerprint) < fingerprintSize {
-				if fp, err := fingerprint(s.f); err == nil && len(fp) > len(s.fingerprint) {
-					s.fingerprint = fp
-				}
-			}
+			t.consume(s, buf[:n])
 		}
 		if readErr != nil {
 			break
 		}
 	}
+}
+
+// consume advances the offset, emits complete lines from the newly read
+// chunk, and grows the fingerprint until it reaches its target size.
+func (t *Tailer) consume(s *fileState, chunk []byte) {
+	readAt := time.Now()
+	s.offset += int64(len(chunk))
+	s.partial = append(s.partial, chunk...)
+	for {
+		i := bytes.IndexByte(s.partial, '\n')
+		if i < 0 {
+			break
+		}
+		t.emit(s, s.partial[:i], readAt)
+		s.partial = s.partial[i+1:]
+	}
+	if len(s.fingerprint) < fingerprintSize {
+		if fp, err := fingerprint(s.f); err == nil && len(fp) > len(s.fingerprint) {
+			s.fingerprint = fp
+		}
+	}
+}
+
+// checkTruncation detects copytruncate rotation and truncate-regrow. It
+// reports false if the file cannot be stat'd, so the caller must stop reading.
+func (t *Tailer) checkTruncation(s *fileState) bool {
+	fi, err := s.f.Stat()
+	if err != nil {
+		t.cfg.Logger.Warn("Could not stat file", "path", s.path, "err", err)
+		return false
+	}
+	if fi.Size() < s.offset {
+		t.resetTruncated(s)
+	} else if cur, fpErr := fingerprint(s.f); fpErr == nil && !headMatches(cur, s.fingerprint) {
+		// The file was truncated and regrew past the old offset between polls.
+		t.resetTruncated(s)
+	}
+	return true
+}
+
+// resetTruncated restarts a file at offset 0 and refreshes its fingerprint.
+func (t *Tailer) resetTruncated(s *fileState) {
+	s.offset = 0
+	s.partial = nil
+	s.joiner = criJoiner{}
+	if fp, err := fingerprint(s.f); err == nil {
+		s.fingerprint = fp
+	}
+}
+
+// headMatches reports whether cur starts with the saved fingerprint prefix.
+func headMatches(cur, saved []byte) bool {
+	n := len(saved)
+	if n == 0 || len(cur) < n {
+		return false
+	}
+	return bytes.Equal(cur[:n], saved)
 }
 
 // emit parses one raw line and sends a complete record to the handler.
